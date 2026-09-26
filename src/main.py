@@ -1,33 +1,35 @@
-# src/main.py
 import os
 from data_processor import RetailDataProcessor
+from anomaly_detector import OrderAnomalyDetector
 
 def main():
     RAW_DATA_PATH = os.path.join('..', 'data', 'raw', 'online_retail.xlsx')
     CLEAN_DATA_PATH = os.path.join('..', 'data', 'processed', 'cleaned_retail.csv')
     CANCELLED_DATA_PATH = os.path.join('..', 'data', 'processed', 'cancelled_retail.csv')
+    
+    CHART_OUTPUT_PATH = os.path.join('..', 'charts', 'revenue_boxplot.png')
+    ANOMALY_CSV_PATH = os.path.join('..', 'data', 'processed', 'anomaly_orders.csv')
 
-    if not os.path.exists(RAW_DATA_PATH):
-        print(f"Lỗi: Không tìm thấy file dữ liệu gốc tại {RAW_DATA_PATH}")
-        return
+    print("=== [PHASE 1] DATA CLEANING ===")
+    if not os.path.exists(CLEAN_DATA_PATH):
+        processor = RetailDataProcessor(RAW_DATA_PATH)
+        processor.load_and_explore()
+        processor.clean_data()
+        processor.engineer_features()
+        processor.export_data(CLEAN_DATA_PATH, CANCELLED_DATA_PATH)
+    else:
+        print("[Skip] clean data already exists.")
 
-    print("=== CHẠY PIPELINE LÀM SẠCH DỮ LIỆU ===")
-    
-    processor = RetailDataProcessor(RAW_DATA_PATH)
-    
-    print("\n1. Đang tải và khám phá dữ liệu...")
-    processor.load_and_explore()
-    
-    print("\n2. Đang làm sạch dữ liệu...")
-    processor.clean_data()
-    
-    print("\n3. Đang tạo thêm các đặc trưng phân tích (Feature Engineering)...")
-    processor.engineer_features()
-    
-    print("\n4. Đang xuất file...")
-    processor.export_data(CLEAN_DATA_PATH, CANCELLED_DATA_PATH)
-    
-    print("\n=== HOÀN TẤT PIPELINE ===")
+    print("\n=== [PHASE 2] ORDER ANOMALY DETECTION ===")
+    if os.path.exists(CLEAN_DATA_PATH):
+        detector = OrderAnomalyDetector(CLEAN_DATA_PATH, CANCELLED_DATA_PATH)
+        detector.analyze_cancelled_orders()
+        detector.aggregate_orders()
+        detector.detect_iqr_anomalies(ANOMALY_CSV_PATH)
+        detector.evaluate_business_impact()
+        detector.visualize_distribution(CHART_OUTPUT_PATH)
+    else:
+        print("[Error] Missing file cleaned_retail.csv.")
 
 if __name__ == "__main__":
     main()
