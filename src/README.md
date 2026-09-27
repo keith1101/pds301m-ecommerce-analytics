@@ -10,3 +10,8 @@ Trách nhiệm dự kiến:
 - Xuất dữ liệu, bảng kết quả và biểu đồ phục vụ `notebooks/`, `charts/`, `reports/`.
 
 Nếu bổ sung web scraping, tách riêng logic thu thập dữ liệu và tuân thủ điều kiện sử dụng của website nguồn. Đặt các hàm tái sử dụng tại đây thay vì chỉ lưu trong notebook.
+
+## Quy trình scraping
+1. Lấy dữ liệu từ url Book to Scrape
+2. Lấy số sách theo từng page với column: title, price, rating
+3. Lưu dữ liệu vào file csv 
