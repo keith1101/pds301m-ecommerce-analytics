@@ -1,8 +1,10 @@
-# data/
+# Processed Data
 
-Thư mục quản lý các bộ dữ liệu được sử dụng trong dự án.
+Processed datasets are stored externally on the team's Google Drive
+and are not committed to GitHub.
 
-- `raw/`: dữ liệu gốc tải từ nguồn, giữ nguyên để có thể đối chiếu.
-- `processed/`: dữ liệu đã làm sạch, biến đổi, chuẩn hóa hoặc tổng hợp.
+Expected input for RFM analysis:
 
-**Quy tắc:** ghi nhận nguồn, thời điểm tải, phiên bản và các bước xử lý. Không đưa dữ liệu lớn hoặc dữ liệu nhạy cảm lên GitHub khi chưa kiểm tra giấy phép và quyền chia sẻ. Chưa có dataset nào được commit trong nhánh này.
+- cleaned_retail.csv
+
+The customer segmentation notebook downloads the dataset at runtime.
