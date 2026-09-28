@@ -1,3 +1,47 @@
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+
+# Datasets
+data/raw/*
+!data/raw/README.md
+!data/raw/.gitkeep
+
+data/processed/*
+!data/processed/README.md
+!data/processed/.gitkeep
+
+# Logs
+*.log
+
+# Operating systems
+.DS_Store
+Thumbs.db
+desktop.ini
+scraper_tmp.py
 # Preserve documentation while excluding datasets
 data/raw/*
 !data/raw/README.md
