@@ -149,7 +149,7 @@ if __name__ == "__main__":
 
     if df.empty:
         print("No books scraped. CSV was not saved.")
-    elif report["total"] == 0:
+    elif report["total_issues"] == 0:
         save_csv(df, output_path)
         print(f"Saved {len(df)} books to {output_path}")
     else:
