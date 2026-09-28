@@ -23,7 +23,6 @@ env/
 
 # IDE
 .idea/
-.vscode/
 
 # Datasets
 data/raw/*
@@ -34,6 +33,9 @@ data/processed/*
 !data/processed/README.md
 !data/processed/.gitkeep
 
+# Analysis artifacts
+# Charts and image files are intentionally tracked in Git for review/reporting.
+
 # Logs
 *.log
 
@@ -41,19 +43,6 @@ data/processed/*
 .DS_Store
 Thumbs.db
 desktop.ini
-scraper_tmp.py
-# Preserve documentation while excluding datasets
-data/raw/*
-!data/raw/README.md
-data/processed/*
-!data/processed/README.md
 
-# Python and local environment
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.ipynb_checkpoints/
-.env
-.env.*
-!.env.example
+# Temporary scripts
+scraper_tmp.py
