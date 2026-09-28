@@ -2,7 +2,17 @@
 
 ## 1. Purpose
 
-Build a reproducible customer-segmentation baseline using Recency, Frequency and Monetary (RFM), including explicit eligibility rules, tie-safe scoring, segment thresholds, a Pandas prototype, tests, and a production-ready `customer_segments.csv` path.
+Build a reproducible RFM customer-segmentation baseline for Issue #5 by:
+
+- defining Recency, Frequency and Monetary consistently;
+- defining a common reference-date rule;
+- defining tie-safe R/F/M scoring from 1–5;
+- defining rule-based customer segments and their precedence;
+- designing the future `customer_segments.csv` schema;
+- validating the methodology with a Pandas prototype and edge-case tests;
+- preparing reusable code that can later run on `cleaned_retail.csv`.
+
+Issue #5 does **not** require the official full-data analysis or exporting the production `customer_segments.csv`.
 
 ## 2. RFM population
 
@@ -10,7 +20,7 @@ A transaction row is eligible for RFM only when all rules below are true:
 
 1. `InvoiceNo` does **not** start with `C` (cancelled invoice).
 2. `CustomerID` is present.
-3. `CustomerID` is not the anonymous placeholder `Guest` used by the current `cleaned_retail.csv`.
+3. `CustomerID` is not an anonymous placeholder such as `Guest`.
 4. `Quantity > 0`.
 5. `UnitPrice > 0`.
 6. `InvoiceDate` is parseable.
@@ -22,7 +32,7 @@ A transaction row is eligible for RFM only when all rules below are true:
 Revenue = Quantity × UnitPrice
 ```
 
-Why exclude `Guest`: anonymous transactions cannot be linked to one real customer. Treating every anonymous row as one customer would create a synthetic high-frequency/high-monetary customer and distort segmentation.
+Anonymous rows are excluded from customer-level RFM because they cannot be linked to one real customer. Treating all anonymous purchases as one customer would create a synthetic high-frequency/high-monetary customer and distort segmentation.
 
 ## 3. Reference date and RFM formulas
 
@@ -32,46 +42,81 @@ The reference date is derived from the final **valid identified-customer purchas
 ReferenceDate = normalize(max(valid InvoiceDate)) + 1 day
 ```
 
-This makes a purchase on the final transaction date have `Recency = 1`, not 0, and the same rule is used in prototype and production.
+Using the next calendar day makes a customer purchasing on the final transaction date have `Recency = 1`, not 0. The same rule must be used in prototype and later official analysis.
 
 Per `CustomerID`:
 
 ```text
-Recency   = (ReferenceDate - LastPurchaseDate) in calendar days
-Frequency = count of distinct valid InvoiceNo
-Monetary  = sum(Quantity × UnitPrice)
+LastPurchaseDate = max(valid InvoiceDate)
+Recency          = (ReferenceDate - LastPurchaseDate) in calendar days
+Frequency        = count of distinct valid InvoiceNo
+Monetary         = sum(Quantity × UnitPrice)
 ```
 
 Frequency deliberately uses `nunique(InvoiceNo)`: multiple product lines on the same invoice count as one purchase.
 
 ## 4. RFM scoring (1–5)
 
-Direction:
+### 4.1 Direction
 
-- Lower Recency is better → higher R score.
-- Higher Frequency is better → higher F score.
-- Higher Monetary is better → higher M score.
+- Lower Recency is better → higher `R_score`.
+- Higher Frequency is better → higher `F_score`.
+- Higher Monetary is better → higher `M_score`.
 
-### Primary method: quintile thresholds
+### 4.2 Percentile-rank scoring
 
-For each metric, compute empirical q20/q40/q60/q80 cutoffs. If all four cutoffs are distinct, assign raw buckets 1–5 by threshold. Values exactly equal to a cutoff remain together in the same bucket, so tied raw values are never split.
+Direct `pd.qcut(..., 5)` may fail or become unstable when many customers share the same raw value or when fewer than five distinct values exist.
 
-For Recency, the raw quintile bucket is inverted (`score = 6 - bucket`) because lower Recency is better.
+Issue #5 therefore uses **average percentile ranks**:
 
-### Tie / low-cardinality fallback
+```python
+percentile_rank = metric.rank(
+    method="average",
+    pct=True,
+    ascending=True,
+)
+```
 
-Direct `pd.qcut(..., 5)` can fail when quantile edges are duplicated or when too few distinct values exist. The prototype therefore falls back to **dense unique-value scaling**:
+The raw percentile rank is mapped to five score levels:
 
-- equal raw values always receive equal scores;
-- one unique value receives neutral score 3;
-- 2–4 unique values are spread deterministically across the 1–5 scale;
-- no duplicate-bin error is possible.
+```text
+F_score = ceil(percentile_rank(Frequency) × 5)
+M_score = ceil(percentile_rank(Monetary) × 5)
+```
 
-This prioritizes deterministic labels and tie consistency over forcing exactly 20% of customers into every bucket.
+Recency has the opposite direction, so its score is reversed:
+
+```text
+R_score = 6 - ceil(percentile_rank(Recency) × 5)
+```
+
+All scores are clipped to `[1, 5]`.
+
+### 4.3 Tie and low-cardinality behavior
+
+`method="average"` is intentional:
+
+- equal raw values receive the same average percentile rank;
+- equal raw values therefore receive the same R/F/M score;
+- the method works even when there are fewer than five distinct values;
+- no duplicate quantile-bin error occurs;
+- score groups are **not required** to contain exactly 20% of customers when ties exist.
+
+The prototype prioritizes deterministic treatment of equal values over forcing equal-sized buckets.
+
+Example:
+
+```text
+Frequency raw:   1  1  1  2  2  3
+Percentile rank: .333 .333 .333 .75 .75 1.0
+F_score:         2  2  2  4  4  5
+```
+
+If every customer has the same raw value, all customers receive the same score because their average percentile ranks are equal.
 
 ## 5. Segment rules and precedence
 
-Rules are evaluated top-to-bottom; first match wins. Therefore every customer receives exactly one segment.
+Rules are evaluated top-to-bottom; the **first matching rule wins**. Therefore each customer receives exactly one segment.
 
 | Priority | Segment | Rule |
 |---:|---|---|
@@ -83,93 +128,148 @@ Rules are evaluated top-to-bottom; first match wins. Therefore every customer re
 | 6 | Hibernating | `R <= 2 and F <= 2 and M <= 2` |
 | 7 | Others | all remaining score combinations |
 
-These are project baseline thresholds for Issue #5. If the team later changes segment definitions or compares them with K-Means, that change should be versioned because customer counts will change.
+These thresholds are the rule-based baseline for Issue #5. If the team later changes segment definitions or compares them with K-Means, the change should be versioned because segment counts will change.
 
-## 6. `customer_segments.csv` schema
+## 6. Designed `customer_segments.csv` schema
 
-| Column | Meaning |
-|---|---|
-| `CustomerID` | identified customer key |
-| `Recency` | days since last valid purchase |
-| `Frequency` | distinct valid invoices |
-| `Monetary` | total valid purchase value |
-| `R_score` | Recency score 1–5 |
-| `F_score` | Frequency score 1–5 |
-| `M_score` | Monetary score 1–5 |
-| `RFM_score` | three-digit code such as `545` |
-| `RFM_total` | R + F + M, range 3–15 |
-| `Segment` | rule-based segment label |
-| `LastPurchaseDate` | customer most recent valid purchase date |
-| `ReferenceDate` | run-level RFM reference date |
+Issue #5 requires the **design** of the future `customer_segments.csv` structure. It does not require exporting the official production CSV.
+
+### 6.1 Row granularity
+
+Each row represents **one unique customer**:
+
+```text
+valid transaction rows
+        ↓
+group by CustomerID
+        ↓
+1 CustomerID = 1 row
+```
+
+`CustomerID` is the logical primary key and must be unique and non-null.
+
+### 6.2 Column specification
+
+| Column | Data type | Required | Meaning |
+|---|---|---:|---|
+| `CustomerID` | string | Yes | Identified customer key |
+| `Recency` | integer | Yes | Days from `LastPurchaseDate` to `ReferenceDate` |
+| `Frequency` | integer | Yes | Number of distinct valid invoices |
+| `Monetary` | float | Yes | Total valid purchase value |
+| `R_score` | integer | Yes | Recency score in `[1, 5]` |
+| `F_score` | integer | Yes | Frequency score in `[1, 5]` |
+| `M_score` | integer | Yes | Monetary score in `[1, 5]` |
+| `RFM_score` | string | Yes | Three-character R/F/M code, e.g. `545` |
+| `RFM_total` | integer | Yes | `R + F + M`, range `[3, 15]` |
+| `Segment` | string | Yes | Rule-based segment label |
+| `LastPurchaseDate` | date | Yes | Most recent valid purchase date |
+| `ReferenceDate` | date | Yes | Common run-level reference date |
+
+Agreed column order:
+
+```text
+CustomerID
+Recency
+Frequency
+Monetary
+R_score
+F_score
+M_score
+RFM_score
+RFM_total
+Segment
+LastPurchaseDate
+ReferenceDate
+```
+
+Equivalent future CSV header:
+
+```csv
+CustomerID,Recency,Frequency,Monetary,R_score,F_score,M_score,RFM_score,RFM_total,Segment,LastPurchaseDate,ReferenceDate
+```
+
+### 6.3 Schema constraints
+
+The prototype output should satisfy:
+
+- `CustomerID` is unique and non-null;
+- anonymous customer identifiers are excluded;
+- `Recency >= 1`;
+- `Frequency >= 1`;
+- `Monetary > 0`;
+- `R_score`, `F_score`, `M_score` are integers in `[1, 5]`;
+- `RFM_score` is exactly three score digits;
+- `RFM_total` is in `[3, 15]`;
+- each customer has exactly one `Segment`;
+- `LastPurchaseDate <= ReferenceDate`;
+- all customers in one RFM run use the same `ReferenceDate`.
+
+Allowed segment labels:
+
+```text
+Champions
+Loyal Customers
+At Risk
+Potential Loyalists
+New Customers
+Hibernating
+Others
+```
 
 ## 7. Prototype validation cases
 
-Automated tests cover:
+The prototype and automated tests cover:
 
 - one-order customers;
 - multiple orders per customer;
 - multiple product lines on one invoice;
 - cancelled invoices;
 - missing `CustomerID`;
-- the `Guest` anonymous placeholder;
+- anonymous `Guest`;
 - non-positive quantity/price;
 - exact duplicates;
 - equal RFM values;
-- low-cardinality/duplicate-quantile scoring;
+- low-cardinality percentile-rank scoring;
 - reference-date correctness;
-- score range 1–5 and segment precedence.
+- score range 1–5;
+- segment precedence;
+- designed `customer_segments.csv` schema.
 
-## 8. Current production run on `cleaned_retail.csv`
+## 8. Readiness for `cleaned_retail.csv`
 
-The supplied processed dataset contains **524,878 rows**. The current cleaning pipeline has no remaining cancelled rows, missing IDs, non-positive quantity/price rows, invalid dates, or exact duplicates. It does contain **132,186 rows labelled `Guest`**, which are intentionally excluded from customer-level RFM because they represent anonymous purchases rather than one identifiable customer.
+Issue #5 only requires reusable code to be ready for the later official dataset.
 
-After the RFM population rule is applied:
+Intended later usage:
 
-- valid identified-customer transaction rows: **392,692**
-- distinct identified customers: **4,338**
-- distinct valid invoices: **18,532**
-- latest valid identified-customer purchase: **2011-12-09 12:50:00**
-- RFM reference date: **2011-12-10**
+```python
+cleaned = pd.read_csv("data/processed/cleaned_retail.csv")
+customer_segments = calculate_rfm(cleaned)
+```
 
+Issue #5 does **not** execute the official full-data segmentation and does **not** call:
 
-### Current score thresholds
+```python
+customer_segments.to_csv(...)
+```
 
-All three metrics use the primary quantile method on the current production run because q20/q40/q60/q80 are distinct.
-
-| Metric | q20 | q40 | q60 | q80 | Interpretation |
-|---|---:|---:|---:|---:|---|
-| Recency (days) | 13.8 | 33 | 72 | 180 | `R=5` for <=13.8 days; `R=1` for >180 days |
-| Frequency (invoices) | 1 | 2 | 3 | 6 | `F=1` for <=1 invoice; `F=5` for >6 invoices |
-| Monetary | 249.344 | 487.412 | 933.348 | 2055.05 | `M=1` for <=249.344; `M=5` for >2055.05 |
-
-These are **data-dependent run thresholds**, not hard-coded constants. A new official dataset recomputes them using the same methodology.
-
-
-### Segment counts
-
-| Segment | Customers | Share |
-|---|---:|---:|
-| Hibernating | 954 | 21.99% |
-| Champions | 911 | 21.00% |
-| At Risk | 773 | 17.82% |
-| Others | 599 | 13.81% |
-| Potential Loyalists | 484 | 11.16% |
-| Loyal Customers | 381 | 8.78% |
-| New Customers | 236 | 5.44% |
-
-Total: **4,338 customers**.
-
+Exporting the official `customer_segments.csv` belongs to a later analysis/integration step.
 
 ## 9. Repository integration
 
-Recommended Issue #5 artifacts:
+Issue #5 artifacts:
 
 ```text
 docs/rfm_methodology.md
 src/feature_engineering.py
 notebooks/04_customer_segmentation.ipynb
 tests/test_rfm.py
-data/processed/customer_segments.csv
 ```
 
-`src/feature_engineering.py` contains reusable production logic. The notebook demonstrates the method and validates the actual processed dataset instead of being the only place where business logic exists.
+Responsibilities:
+
+- `docs/rfm_methodology.md`: methodology, scoring, segment thresholds and schema design;
+- `src/feature_engineering.py`: reusable Pandas RFM implementation;
+- `notebooks/04_customer_segmentation.ipynb`: deterministic prototype and validation;
+- `tests/test_rfm.py`: automated edge-case regression tests.
+
+`data/processed/customer_segments.csv` is deliberately **not** an Issue #5 deliverable.
