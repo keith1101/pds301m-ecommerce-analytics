@@ -140,3 +140,23 @@ def test_segment_precedence():
     assert assign_rfm_segment(champion) == "Champions"
     assert assign_rfm_segment(loyal) == "Loyal Customers"
     assert assign_rfm_segment(at_risk) == "At Risk"
+
+def test_segment_labels_follow_six_label_contract():
+    allowed_segments = {
+        "Champions",
+        "Loyal Customers",
+        "At Risk",
+        "Potential Loyalists",
+        "Hibernating",
+        "Others",
+    }
+
+    rfm = calculate_rfm(sample_transactions(), reference_date="2011-12-10")
+    assert set(rfm["Segment"]).issubset(allowed_segments)
+
+    # A recent, low-frequency score profile falls through to Others.
+    recent_low_frequency = pd.Series(
+        {"R_score": 5, "F_score": 1, "M_score": 1}
+    )
+    assert assign_rfm_segment(recent_low_frequency) == "Others"
+

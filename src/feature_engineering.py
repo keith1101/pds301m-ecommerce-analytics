@@ -1,17 +1,4 @@
-"""RFM feature engineering utilities for PDS301m Online Retail.
-
-Issue #5: RFM Methodology & Prototype.
-
-The module is deliberately defensive: even if ``cleaned_retail.csv`` has
-already been cleaned, the RFM population is validated again before customer
-aggregation so the methodology is reproducible from either raw-like samples
-or the processed project dataset.
-
-RFM scoring follows the methodology documented for Issue #5:
-average percentile ranks are converted to integer scores from 1 to 5.
-Equal raw values therefore receive equal scores, and the method remains
-defined even when a metric has fewer than five distinct values.
-"""
+"""Reusable RFM feature-engineering utilities for Issue #5."""
 from __future__ import annotations
 
 from typing import Any
@@ -29,9 +16,24 @@ REQUIRED_RFM_COLUMNS = {
 
 DEFAULT_ANONYMOUS_CUSTOMER_LABELS = ("Guest",)
 
+CUSTOMER_SEGMENTS_COLUMNS = [
+    "CustomerID",
+    "Recency",
+    "Frequency",
+    "Monetary",
+    "R_score",
+    "F_score",
+    "M_score",
+    "RFM_score",
+    "RFM_total",
+    "Segment",
+    "LastPurchaseDate",
+    "ReferenceDate",
+]
+
 
 def _normalise_customer_id(series: pd.Series) -> pd.Series:
-    """Return CustomerID as stable strings; convert UCI values like 17850.0 -> 17850."""
+    """Return CustomerID as stable strings; e.g. 17850.0 -> 17850."""
     result = series.astype("string").str.strip()
     return result.str.replace(r"\.0$", "", regex=True)
 
@@ -71,19 +73,7 @@ def prepare_rfm_transactions(
     df: pd.DataFrame,
     anonymous_customer_labels: tuple[str, ...] = DEFAULT_ANONYMOUS_CUSTOMER_LABELS,
 ) -> pd.DataFrame:
-    """Filter transaction rows to the valid purchase population used by RFM.
-
-    Eligibility rules
-    -----------------
-    * InvoiceNo does not start with ``C``.
-    * CustomerID is present and is not an anonymous placeholder such as Guest.
-    * Quantity > 0 and UnitPrice > 0.
-    * InvoiceDate is parseable.
-    * Exact duplicate rows are removed.
-
-    Revenue is always recalculated as ``Quantity * UnitPrice`` so Monetary uses
-    the same formula regardless of whether an input Revenue column already exists.
-    """
+    """Return the valid purchase population used for customer-level RFM."""
     missing = REQUIRED_RFM_COLUMNS.difference(df.columns)
     if missing:
         raise ValueError(f"Missing required columns: {sorted(missing)}")
@@ -121,23 +111,18 @@ def score_rfm_metric(
     *,
     higher_is_better: bool,
 ) -> tuple[pd.Series, dict[str, Any]]:
-    """Score one RFM metric from 1 to 5 using tie-safe percentile ranks.
+    """Score one RFM metric 1–5 using tie-safe average percentile ranks.
 
-    Method
-    ------
-    1. Convert the metric to numeric and reject null/non-numeric values.
-    2. Compute percentile ranks with
-       ``rank(method="average", pct=True, ascending=True)``.
-       Equal raw values receive the same average percentile rank.
-    3. Convert the percentile rank to a 1..5 score with
-       ``ceil(percentile_rank * 5)``.
-    4. For Recency (``higher_is_better=False``), reverse the score with
-       ``6 - score`` so lower Recency receives a higher score.
+    Formula:
+        base_score = ceil(percentile_rank * 5)
 
-    Unlike direct ``qcut(..., 5)``, this method does not require five distinct
-    raw values and does not fail because of duplicate quantile boundaries.
-    Score buckets are not forced to contain exactly 20% of customers when ties
-    are present; preserving equal-value ties is intentional.
+    Frequency/Monetary:
+        score = base_score
+
+    Recency:
+        score = 6 - base_score
+
+    ``rank(method="average")`` ensures equal raw values receive equal scores.
     """
     numeric = pd.to_numeric(series, errors="coerce")
 
@@ -172,15 +157,11 @@ def score_rfm_metric(
         "min_percentile_rank": float(percentile_rank.min()),
         "max_percentile_rank": float(percentile_rank.max()),
     }
-
     return score, metadata
 
 
 def assign_rfm_segment(row: pd.Series) -> str:
-    """Assign one mutually exclusive rule-based RFM segment.
-
-    Rule precedence is intentional; the first matching rule wins.
-    """
+    """Assign one mutually exclusive segment; first matching rule wins."""
     r = int(row["R_score"])
     f = int(row["F_score"])
     m = int(row["M_score"])
@@ -193,8 +174,6 @@ def assign_rfm_segment(row: pd.Series) -> str:
         return "At Risk"
     if r >= 4 and 2 <= f <= 3:
         return "Potential Loyalists"
-    if r >= 4 and f == 1:
-        return "New Customers"
     if r <= 2 and f <= 2 and m <= 2:
         return "Hibernating"
     return "Others"
@@ -207,12 +186,7 @@ def calculate_rfm(
     anonymous_customer_labels: tuple[str, ...] = DEFAULT_ANONYMOUS_CUSTOMER_LABELS,
     return_metadata: bool = False,
 ) -> pd.DataFrame | tuple[pd.DataFrame, dict[str, Any]]:
-    """Calculate customer-level RFM metrics, scores and segments.
-
-    Reference date rule: one calendar day after the latest valid purchase date.
-    A supplied reference date must be strictly after the latest valid purchase
-    date, so a customer purchasing on the final transaction date has Recency=1.
-    """
+    """Calculate customer-level RFM metrics, percentile scores and segments."""
     transactions = prepare_rfm_transactions(
         df,
         anonymous_customer_labels=anonymous_customer_labels,
@@ -242,21 +216,16 @@ def calculate_rfm(
     )
 
     rfm["LastPurchaseDate"] = rfm["LastPurchaseDate"].dt.normalize()
-    rfm["Recency"] = (
-        reference - rfm["LastPurchaseDate"]
-    ).dt.days.astype(int)
+    rfm["Recency"] = (reference - rfm["LastPurchaseDate"]).dt.days.astype(int)
 
     rfm["R_score"], r_meta = score_rfm_metric(
-        rfm["Recency"],
-        higher_is_better=False,
+        rfm["Recency"], higher_is_better=False
     )
     rfm["F_score"], f_meta = score_rfm_metric(
-        rfm["Frequency"],
-        higher_is_better=True,
+        rfm["Frequency"], higher_is_better=True
     )
     rfm["M_score"], m_meta = score_rfm_metric(
-        rfm["Monetary"],
-        higher_is_better=True,
+        rfm["Monetary"], higher_is_better=True
     )
 
     rfm["RFM_score"] = (
@@ -265,30 +234,13 @@ def calculate_rfm(
         + rfm["M_score"].astype(str)
     )
     rfm["RFM_total"] = (
-        rfm[["R_score", "F_score", "M_score"]]
-        .sum(axis=1)
-        .astype(int)
+        rfm[["R_score", "F_score", "M_score"]].sum(axis=1).astype(int)
     )
     rfm["Segment"] = rfm.apply(assign_rfm_segment, axis=1)
     rfm["ReferenceDate"] = reference
 
-    columns = [
-        "CustomerID",
-        "Recency",
-        "Frequency",
-        "Monetary",
-        "R_score",
-        "F_score",
-        "M_score",
-        "RFM_score",
-        "RFM_total",
-        "Segment",
-        "LastPurchaseDate",
-        "ReferenceDate",
-    ]
-
     rfm = (
-        rfm[columns]
+        rfm[CUSTOMER_SEGMENTS_COLUMNS]
         .sort_values(
             ["RFM_total", "Monetary", "CustomerID"],
             ascending=[False, False, True],

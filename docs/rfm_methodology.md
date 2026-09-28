@@ -124,9 +124,10 @@ Rules are evaluated top-to-bottom; the **first matching rule wins**. Therefore e
 | 2 | Loyal Customers | `R >= 3 and F >= 4` |
 | 3 | At Risk | `R <= 2 and (F >= 3 or M >= 3)` |
 | 4 | Potential Loyalists | `R >= 4 and 2 <= F <= 3` |
-| 5 | New Customers | `R >= 4 and F == 1` |
-| 6 | Hibernating | `R <= 2 and F <= 2 and M <= 2` |
-| 7 | Others | all remaining score combinations |
+| 5 | Hibernating | `R <= 2 and F <= 2 and M <= 2` |
+| 6 | Others | all remaining score combinations |
+
+The baseline deliberately does not infer customer tenure or first-purchase status from RFM. Recency describes how recently a customer purchased, not when the customer relationship started; tenure-based segmentation would require an additional first-purchase definition.
 
 These thresholds are the rule-based baseline for Issue #5. If the team later changes segment definitions or compares them with K-Means, the change should be versioned because segment counts will change.
 
@@ -211,7 +212,6 @@ Champions
 Loyal Customers
 At Risk
 Potential Loyalists
-New Customers
 Hibernating
 Others
 ```
