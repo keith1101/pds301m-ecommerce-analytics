@@ -1,0 +1,15 @@
+# Preserve documentation while excluding datasets
+data/raw/*
+!data/raw/README.md
+data/processed/*
+!data/processed/README.md
+
+# Python and local environment
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.env
+.env.*
+!.env.example
