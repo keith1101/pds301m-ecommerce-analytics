@@ -6,6 +6,11 @@ The module is deliberately defensive: even if ``cleaned_retail.csv`` has
 already been cleaned, the RFM population is validated again before customer
 aggregation so the methodology is reproducible from either raw-like samples
 or the processed project dataset.
+
+RFM scoring follows the methodology documented for Issue #5:
+average percentile ranks are converted to integer scores from 1 to 5.
+Equal raw values therefore receive equal scores, and the method remains
+defined even when a metric has fewer than five distinct values.
 """
 from __future__ import annotations
 
@@ -23,7 +28,6 @@ REQUIRED_RFM_COLUMNS = {
 }
 
 DEFAULT_ANONYMOUS_CUSTOMER_LABELS = ("Guest",)
-QUANTILES = (0.20, 0.40, 0.60, 0.80)
 
 
 def _normalise_customer_id(series: pd.Series) -> pd.Series:
@@ -112,73 +116,63 @@ def prepare_rfm_transactions(
     return x
 
 
-def _dense_fallback_score(series: pd.Series) -> pd.Series:
-    """Map ordered unique values onto 1..5 when quantile edges are duplicated.
-
-    Equal raw values always receive equal scores. With one unique value every
-    observation receives neutral score 3. With 2-4 unique values, available
-    values are spread deterministically across the 1..5 scale.
-    """
-    unique_values = np.sort(series.dropna().unique())
-    n_unique = len(unique_values)
-
-    if n_unique == 0:
-        raise ValueError("Cannot score an empty/all-null series.")
-    if n_unique == 1:
-        return pd.Series(3, index=series.index, dtype="Int64")
-
-    # Half-up rounding, avoiding Python's bankers rounding.
-    raw_scores = 1 + np.floor(
-        (np.arange(n_unique) * 4 / (n_unique - 1)) + 0.5
-    ).astype(int)
-    mapping = dict(zip(unique_values, raw_scores))
-    return series.map(mapping).astype("Int64")
-
-
 def score_rfm_metric(
     series: pd.Series,
     *,
     higher_is_better: bool,
 ) -> tuple[pd.Series, dict[str, Any]]:
-    """Score one RFM metric on 1..5 using quintile cutoffs with a tie-safe fallback.
+    """Score one RFM metric from 1 to 5 using tie-safe percentile ranks.
 
-    Primary method: empirical 20/40/60/80% quantile thresholds. Threshold
-    assignment uses ``searchsorted(..., side='left')`` so observations exactly
-    equal to a cutoff stay together in the lower raw bucket.
+    Method
+    ------
+    1. Convert the metric to numeric and reject null/non-numeric values.
+    2. Compute percentile ranks with
+       ``rank(method="average", pct=True, ascending=True)``.
+       Equal raw values receive the same average percentile rank.
+    3. Convert the percentile rank to a 1..5 score with
+       ``ceil(percentile_rank * 5)``.
+    4. For Recency (``higher_is_better=False``), reverse the score with
+       ``6 - score`` so lower Recency receives a higher score.
 
-    Fallback: if quantile edges are duplicated (or the metric has too few
-    distinct values), use dense-value scaling. This prevents qcut duplicate-bin
-    errors and avoids splitting equal raw values across different scores.
+    Unlike direct ``qcut(..., 5)``, this method does not require five distinct
+    raw values and does not fail because of duplicate quantile boundaries.
+    Score buckets are not forced to contain exactly 20% of customers when ties
+    are present; preserving equal-value ties is intentional.
     """
     numeric = pd.to_numeric(series, errors="coerce")
+
     if numeric.isna().any():
-        raise ValueError(f"RFM metric contains {int(numeric.isna().sum())} null/non-numeric values.")
+        raise ValueError(
+            f"RFM metric contains {int(numeric.isna().sum())} "
+            "null/non-numeric values."
+        )
     if numeric.empty:
         raise ValueError("Cannot score an empty RFM metric.")
 
-    cutoffs = numeric.quantile(list(QUANTILES)).to_numpy(dtype=float)
-    unique_cutoffs = np.unique(cutoffs)
+    percentile_rank = numeric.rank(
+        method="average",
+        pct=True,
+        ascending=True,
+    )
 
-    if len(unique_cutoffs) == len(QUANTILES):
-        raw = np.searchsorted(cutoffs, numeric.to_numpy(dtype=float), side="left") + 1
-        base_score = pd.Series(raw, index=series.index, dtype="Int64")
-        method = "quantile"
-    else:
-        base_score = _dense_fallback_score(numeric)
-        method = "dense_fallback"
+    base_score = pd.Series(
+        np.ceil(percentile_rank.to_numpy(dtype=float) * 5).astype(int),
+        index=series.index,
+        dtype="Int64",
+    ).clip(1, 5)
 
     score = base_score if higher_is_better else (6 - base_score)
     score = score.clip(1, 5).astype("Int64")
 
-    metadata = {
-        "method": method,
-        "q20": float(cutoffs[0]),
-        "q40": float(cutoffs[1]),
-        "q60": float(cutoffs[2]),
-        "q80": float(cutoffs[3]),
+    metadata: dict[str, Any] = {
+        "method": "percentile_rank_average",
+        "rank_method": "average",
         "n_unique": int(numeric.nunique()),
         "higher_is_better": bool(higher_is_better),
+        "min_percentile_rank": float(percentile_rank.min()),
+        "max_percentile_rank": float(percentile_rank.max()),
     }
+
     return score, metadata
 
 
@@ -220,12 +214,14 @@ def calculate_rfm(
     date, so a customer purchasing on the final transaction date has Recency=1.
     """
     transactions = prepare_rfm_transactions(
-        df, anonymous_customer_labels=anonymous_customer_labels
+        df,
+        anonymous_customer_labels=anonymous_customer_labels,
     )
     if transactions.empty:
         raise ValueError("No valid purchase rows remain after RFM eligibility rules.")
 
     last_valid_purchase = transactions["InvoiceDate"].max()
+
     if reference_date is None:
         reference = last_valid_purchase.normalize() + pd.Timedelta(days=1)
     else:
@@ -246,16 +242,21 @@ def calculate_rfm(
     )
 
     rfm["LastPurchaseDate"] = rfm["LastPurchaseDate"].dt.normalize()
-    rfm["Recency"] = (reference - rfm["LastPurchaseDate"]).dt.days.astype(int)
+    rfm["Recency"] = (
+        reference - rfm["LastPurchaseDate"]
+    ).dt.days.astype(int)
 
     rfm["R_score"], r_meta = score_rfm_metric(
-        rfm["Recency"], higher_is_better=False
+        rfm["Recency"],
+        higher_is_better=False,
     )
     rfm["F_score"], f_meta = score_rfm_metric(
-        rfm["Frequency"], higher_is_better=True
+        rfm["Frequency"],
+        higher_is_better=True,
     )
     rfm["M_score"], m_meta = score_rfm_metric(
-        rfm["Monetary"], higher_is_better=True
+        rfm["Monetary"],
+        higher_is_better=True,
     )
 
     rfm["RFM_score"] = (
@@ -263,7 +264,11 @@ def calculate_rfm(
         + rfm["F_score"].astype(str)
         + rfm["M_score"].astype(str)
     )
-    rfm["RFM_total"] = rfm[["R_score", "F_score", "M_score"]].sum(axis=1).astype(int)
+    rfm["RFM_total"] = (
+        rfm[["R_score", "F_score", "M_score"]]
+        .sum(axis=1)
+        .astype(int)
+    )
     rfm["Segment"] = rfm.apply(assign_rfm_segment, axis=1)
     rfm["ReferenceDate"] = reference
 
@@ -281,10 +286,15 @@ def calculate_rfm(
         "LastPurchaseDate",
         "ReferenceDate",
     ]
-    rfm = rfm[columns].sort_values(
-        ["RFM_total", "Monetary", "CustomerID"],
-        ascending=[False, False, True],
-    ).reset_index(drop=True)
+
+    rfm = (
+        rfm[columns]
+        .sort_values(
+            ["RFM_total", "Monetary", "CustomerID"],
+            ascending=[False, False, True],
+        )
+        .reset_index(drop=True)
+    )
 
     metadata: dict[str, Any] = {
         "reference_date": reference,
