@@ -54,11 +54,13 @@ def audit_rfm_input(
     invoice_date = pd.to_datetime(df["InvoiceDate"], errors="coerce")
     anonymous = {label.casefold() for label in anonymous_customer_labels}
 
+    is_missing_invoice = invoice.isna() | invoice.eq("")
     is_missing_customer = customer.isna() | customer.eq("")
     is_anonymous_customer = customer.str.casefold().isin(anonymous).fillna(False)
 
     return {
         "input_rows": int(len(df)),
+        "missing_invoice_rows": int(is_missing_invoice.sum()),
         "cancelled_rows": int(invoice.str.startswith("C", na=False).sum()),
         "missing_customer_rows": int(is_missing_customer.sum()),
         "anonymous_customer_rows": int(is_anonymous_customer.sum()),
@@ -86,6 +88,11 @@ def prepare_rfm_transactions(
     x["UnitPrice"] = pd.to_numeric(x["UnitPrice"], errors="coerce")
 
     anonymous = {label.casefold() for label in anonymous_customer_labels}
+    valid_invoice = (
+        x["InvoiceNo"].notna()
+        & x["InvoiceNo"].ne("")
+        & ~x["InvoiceNo"].str.startswith("C", na=False)
+    )
     valid_customer = (
         x["CustomerID"].notna()
         & x["CustomerID"].ne("")
@@ -93,14 +100,16 @@ def prepare_rfm_transactions(
     )
 
     valid = (
-        ~x["InvoiceNo"].str.startswith("C", na=False)
+        valid_invoice
         & valid_customer
         & x["InvoiceDate"].notna()
         & x["Quantity"].gt(0)
         & x["UnitPrice"].gt(0)
     )
 
-    x = x.loc[valid].drop_duplicates().copy()
+    # Duplicate handling belongs to the upstream cleaning pipeline.
+    # RFM must not silently apply an independent deduplication policy.
+    x = x.loc[valid].copy()
     x["CustomerID"] = _normalise_customer_id(x["CustomerID"])
     x["Revenue"] = x["Quantity"] * x["UnitPrice"]
     return x
