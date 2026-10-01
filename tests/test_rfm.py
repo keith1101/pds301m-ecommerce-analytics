@@ -3,6 +3,7 @@ import pytest
 
 from src.feature_engineering import (
     CUSTOMER_SEGMENTS_COLUMNS,
+    audit_rfm_input,
     assign_rfm_segment,
     calculate_rfm,
     prepare_rfm_transactions,
@@ -26,6 +27,8 @@ def sample_transactions() -> pd.DataFrame:
             ["10010", "A", 1, "2011-12-08 09:00", 0.0, "7"],
             ["10011", "D", 1, "2011-12-06 09:00", 15.0, "8"],
             ["10011", "D", 1, "2011-12-06 09:00", 15.0, "8"],
+            [None, "E", 1, "2011-12-08 09:00", 12.0, "9"],
+            ["   ", "F", 1, "2011-12-08 09:00", 13.0, "10"],
         ],
         columns=[
             "InvoiceNo", "StockCode", "Quantity",
@@ -47,18 +50,31 @@ def test_latest_purchase_has_recency_one():
     assert c2["Recency"] == 1
 
 
-def test_cancelled_missing_guest_and_invalid_rows_are_excluded():
+def test_cancelled_missing_invoice_missing_customer_guest_and_invalid_rows_are_excluded():
     valid = prepare_rfm_transactions(sample_transactions())
     assert set(valid["CustomerID"].unique()) == {"1", "2", "3", "4", "8"}
+    assert valid["InvoiceNo"].notna().all()
+    assert valid["InvoiceNo"].str.strip().ne("").all()
     assert not valid["InvoiceNo"].str.startswith("C").any()
     assert "Guest" not in set(valid["CustomerID"])
 
 
-def test_exact_duplicates_removed():
+def test_audit_reports_missing_invoice_and_duplicate_rows():
+    audit = audit_rfm_input(sample_transactions())
+    assert audit["missing_invoice_rows"] == 2
+    assert audit["exact_duplicate_rows"] == 1
+
+
+def test_rfm_does_not_silently_deduplicate_input():
+    valid = prepare_rfm_transactions(sample_transactions())
+    c8_rows = valid.loc[valid["CustomerID"].eq("8")]
+    assert len(c8_rows) == 2
+    assert c8_rows.duplicated().sum() == 1
+
     rfm = calculate_rfm(sample_transactions(), reference_date="2011-12-10")
     c8 = rfm.loc[rfm["CustomerID"].eq("8")].iloc[0]
     assert c8["Frequency"] == 1
-    assert c8["Monetary"] == pytest.approx(15.0)
+    assert c8["Monetary"] == pytest.approx(30.0)
 
 
 def test_equal_rfm_values_receive_equal_scores():
