@@ -18,13 +18,15 @@ Issue #5 does **not** require the official full-data analysis or exporting the p
 
 A transaction row is eligible for RFM only when all rules below are true:
 
-1. `InvoiceNo` does **not** start with `C` (cancelled invoice).
-2. `CustomerID` is present.
-3. `CustomerID` is not an anonymous placeholder such as `Guest`.
-4. `Quantity > 0`.
-5. `UnitPrice > 0`.
-6. `InvoiceDate` is parseable.
-7. Exact duplicate rows are removed before aggregation.
+1. `InvoiceNo` is present and non-empty.
+2. `InvoiceNo` does **not** start with `C` (cancelled invoice).
+3. `CustomerID` is present.
+4. `CustomerID` is not an anonymous placeholder such as `Guest`.
+5. `Quantity > 0`.
+6. `UnitPrice > 0`.
+7. `InvoiceDate` is parseable.
+
+Exact duplicate handling belongs to the upstream cleaning pipeline. The RFM layer audits duplicates but does **not** call `drop_duplicates()` or apply an independent deduplication key. This prevents Issue #5 from silently changing the cleaned-data contract.
 
 `Revenue` is recalculated as:
 
@@ -224,10 +226,11 @@ The prototype and automated tests cover:
 - multiple orders per customer;
 - multiple product lines on one invoice;
 - cancelled invoices;
+- missing/blank `InvoiceNo`;
 - missing `CustomerID`;
 - anonymous `Guest`;
 - non-positive quantity/price;
-- exact duplicates;
+- exact duplicates are audited and left untouched by the RFM layer;
 - equal RFM values;
 - low-cardinality percentile-rank scoring;
 - reference-date correctness;
