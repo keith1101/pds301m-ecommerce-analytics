@@ -2,6 +2,8 @@ import pandas as pd
 import pytest
 
 from src.feature_engineering import (
+    CUSTOMER_SEGMENTS_COLUMNS,
+    audit_rfm_input,
     assign_rfm_segment,
     calculate_rfm,
     prepare_rfm_transactions,
@@ -12,27 +14,25 @@ from src.feature_engineering import (
 def sample_transactions() -> pd.DataFrame:
     return pd.DataFrame(
         [
-            # Customer 1: two lines on one invoice + second invoice => F=2.
             ["10001", "A", 1, "2011-12-01 10:00", 10.0, "1"],
             ["10001", "B", 2, "2011-12-01 10:00", 5.0, "1"],
             ["10002", "C", 1, "2011-12-05 10:00", 20.0, "1"],
-            # Customer 2: one order on latest valid date => R=1 with ref 2011-12-10.
             ["10003", "A", 1, "2011-12-09 09:00", 10.0, "2"],
-            # Customers 3 and 4: same raw RFM values => same scores.
             ["10004", "A", 2, "2011-12-07 09:00", 10.0, "3"],
             ["10005", "A", 2, "2011-12-07 09:00", 10.0, "4"],
-            # Rows that must not enter RFM.
             ["C10006", "A", -1, "2011-12-08 09:00", 10.0, "5"],
             ["10007", "A", 1, "2011-12-08 09:00", 10.0, None],
             ["10008", "A", 1, "2011-12-08 09:00", 10.0, "Guest"],
             ["10009", "A", 0, "2011-12-08 09:00", 10.0, "6"],
             ["10010", "A", 1, "2011-12-08 09:00", 0.0, "7"],
-            # Exact duplicate pair should count once.
             ["10011", "D", 1, "2011-12-06 09:00", 15.0, "8"],
             ["10011", "D", 1, "2011-12-06 09:00", 15.0, "8"],
+            [None, "E", 1, "2011-12-08 09:00", 12.0, "9"],
+            ["   ", "F", 1, "2011-12-08 09:00", 13.0, "10"],
         ],
         columns=[
-            "InvoiceNo", "StockCode", "Quantity", "InvoiceDate", "UnitPrice", "CustomerID"
+            "InvoiceNo", "StockCode", "Quantity",
+            "InvoiceDate", "UnitPrice", "CustomerID",
         ],
     )
 
@@ -50,18 +50,31 @@ def test_latest_purchase_has_recency_one():
     assert c2["Recency"] == 1
 
 
-def test_cancelled_missing_guest_and_invalid_rows_are_excluded():
+def test_cancelled_missing_invoice_missing_customer_guest_and_invalid_rows_are_excluded():
     valid = prepare_rfm_transactions(sample_transactions())
     assert set(valid["CustomerID"].unique()) == {"1", "2", "3", "4", "8"}
+    assert valid["InvoiceNo"].notna().all()
+    assert valid["InvoiceNo"].str.strip().ne("").all()
     assert not valid["InvoiceNo"].str.startswith("C").any()
     assert "Guest" not in set(valid["CustomerID"])
 
 
-def test_exact_duplicates_removed():
+def test_audit_reports_missing_invoice_and_duplicate_rows():
+    audit = audit_rfm_input(sample_transactions())
+    assert audit["missing_invoice_rows"] == 2
+    assert audit["exact_duplicate_rows"] == 1
+
+
+def test_rfm_does_not_silently_deduplicate_input():
+    valid = prepare_rfm_transactions(sample_transactions())
+    c8_rows = valid.loc[valid["CustomerID"].eq("8")]
+    assert len(c8_rows) == 2
+    assert c8_rows.duplicated().sum() == 1
+
     rfm = calculate_rfm(sample_transactions(), reference_date="2011-12-10")
     c8 = rfm.loc[rfm["CustomerID"].eq("8")].iloc[0]
     assert c8["Frequency"] == 1
-    assert c8["Monetary"] == pytest.approx(15.0)
+    assert c8["Monetary"] == pytest.approx(30.0)
 
 
 def test_equal_rfm_values_receive_equal_scores():
@@ -76,19 +89,32 @@ def test_equal_rfm_values_receive_equal_scores():
     )
 
 
-def test_low_cardinality_scoring_is_tie_safe_and_never_errors():
+def test_percentile_rank_scoring_is_tie_safe():
     values = pd.Series([1, 1, 1, 2, 2, 3], dtype=float)
     scores, meta = score_rfm_metric(values, higher_is_better=True)
-    assert scores.between(1, 5).all()
+
+    assert scores.tolist() == [2, 2, 2, 4, 4, 5]
     assert scores[values.eq(1)].nunique() == 1
     assert scores[values.eq(2)].nunique() == 1
-    assert meta["method"] == "dense_fallback"
+    assert meta["method"] == "percentile_rank_average"
+    assert meta["rank_method"] == "average"
 
 
-def test_single_unique_value_gets_neutral_score():
-    scores, meta = score_rfm_metric(pd.Series([7, 7, 7]), higher_is_better=True)
-    assert scores.tolist() == [3, 3, 3]
-    assert meta["method"] == "dense_fallback"
+def test_single_unique_value_is_stable_under_percentile_method():
+    scores, meta = score_rfm_metric(
+        pd.Series([7, 7, 7], dtype=float),
+        higher_is_better=True,
+    )
+    assert scores.tolist() == [4, 4, 4]
+    assert meta["method"] == "percentile_rank_average"
+
+
+def test_recency_direction_is_reversed():
+    values = pd.Series([1, 10, 30, 60, 120, 300], dtype=float)
+    scores, meta = score_rfm_metric(values, higher_is_better=False)
+
+    assert scores.iloc[0] > scores.iloc[-1]
+    assert meta["higher_is_better"] is False
 
 
 def test_auto_reference_date_is_day_after_latest_purchase():
@@ -109,10 +135,44 @@ def test_scores_always_within_one_to_five():
         assert rfm[column].between(1, 5).all()
 
 
+def test_customer_segments_schema():
+    rfm = calculate_rfm(sample_transactions(), reference_date="2011-12-10")
+
+    assert rfm.columns.tolist() == CUSTOMER_SEGMENTS_COLUMNS
+    assert rfm["CustomerID"].is_unique
+    assert rfm["CustomerID"].notna().all()
+    assert rfm["Recency"].ge(1).all()
+    assert rfm["Frequency"].ge(1).all()
+    assert rfm["Monetary"].gt(0).all()
+    assert rfm["RFM_score"].astype(str).str.fullmatch(r"[1-5]{3}").all()
+    assert rfm["RFM_total"].between(3, 15).all()
+
+
 def test_segment_precedence():
     champion = pd.Series({"R_score": 5, "F_score": 5, "M_score": 5})
     loyal = pd.Series({"R_score": 3, "F_score": 4, "M_score": 2})
     at_risk = pd.Series({"R_score": 1, "F_score": 5, "M_score": 5})
+
     assert assign_rfm_segment(champion) == "Champions"
     assert assign_rfm_segment(loyal) == "Loyal Customers"
     assert assign_rfm_segment(at_risk) == "At Risk"
+
+def test_segment_labels_follow_six_label_contract():
+    allowed_segments = {
+        "Champions",
+        "Loyal Customers",
+        "At Risk",
+        "Potential Loyalists",
+        "Hibernating",
+        "Others",
+    }
+
+    rfm = calculate_rfm(sample_transactions(), reference_date="2011-12-10")
+    assert set(rfm["Segment"]).issubset(allowed_segments)
+
+    # A recent, low-frequency score profile falls through to Others.
+    recent_low_frequency = pd.Series(
+        {"R_score": 5, "F_score": 1, "M_score": 1}
+    )
+    assert assign_rfm_segment(recent_low_frequency) == "Others"
+
