@@ -1,7 +1,8 @@
 # charts/
 
-Chứa biểu đồ và hình ảnh trực quan hóa được xuất từ quá trình phân tích.
+Thư mục chứa các analysis charts được tạo từ source code hiện tại.
 
-Các sản phẩm dự kiến: xu hướng doanh thu theo thời gian, sản phẩm có doanh thu cao, phân bố hoặc nhóm RFM và biểu đồ đánh dấu đơn hàng bất thường. Mỗi hình cần có tên rõ ràng, tiêu đề, đơn vị đo và tham chiếu tới dữ liệu/phương pháp đã dùng.
+Chart anomaly hiện tại:
 
-Hiện chưa có biểu đồ.
+```text
+revenue_boxplot.png
