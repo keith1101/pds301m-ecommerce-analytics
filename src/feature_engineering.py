@@ -1,4 +1,4 @@
-"""Reusable RFM feature-engineering utilities for Issue #5."""
+"""Reusable RFM utilities for the Issue #5 baseline and Issue #15 follow-up."""
 from __future__ import annotations
 
 from typing import Any
@@ -49,14 +49,33 @@ def audit_rfm_input(
 
     invoice = df["InvoiceNo"].astype("string").str.strip()
     customer = df["CustomerID"].astype("string").str.strip()
-    quantity = pd.to_numeric(df["Quantity"], errors="coerce")
-    unit_price = pd.to_numeric(df["UnitPrice"], errors="coerce")
-    invoice_date = pd.to_datetime(df["InvoiceDate"], errors="coerce")
-    anonymous = {label.casefold() for label in anonymous_customer_labels}
 
-    is_missing_invoice = invoice.isna() | invoice.eq("")
-    is_missing_customer = customer.isna() | customer.eq("")
+    quantity_raw = df["Quantity"]
+    quantity_text = quantity_raw.astype("string").str.strip()
+    quantity = pd.to_numeric(quantity_raw, errors="coerce")
+
+    unit_price_raw = df["UnitPrice"]
+    unit_price_text = unit_price_raw.astype("string").str.strip()
+    unit_price = pd.to_numeric(unit_price_raw, errors="coerce")
+
+    invoice_date = pd.to_datetime(df["InvoiceDate"], errors="coerce")
+    anonymous = {label.strip().casefold() for label in anonymous_customer_labels}
+
+    is_missing_invoice = invoice.isna() | invoice.eq("").fillna(False)
+    is_missing_customer = customer.isna() | customer.eq("").fillna(False)
     is_anonymous_customer = customer.str.casefold().isin(anonymous).fillna(False)
+
+    is_missing_quantity = (
+        quantity_raw.isna() | quantity_text.eq("").fillna(False)
+    )
+    is_nonnumeric_quantity = quantity.isna() & ~is_missing_quantity
+    is_nonpositive_quantity = quantity.notna() & quantity.le(0)
+
+    is_missing_unit_price = (
+        unit_price_raw.isna() | unit_price_text.eq("").fillna(False)
+    )
+    is_nonnumeric_unit_price = unit_price.isna() & ~is_missing_unit_price
+    is_nonpositive_unit_price = unit_price.notna() & unit_price.le(0)
 
     return {
         "input_rows": int(len(df)),
@@ -64,8 +83,12 @@ def audit_rfm_input(
         "cancelled_rows": int(invoice.str.startswith("C", na=False).sum()),
         "missing_customer_rows": int(is_missing_customer.sum()),
         "anonymous_customer_rows": int(is_anonymous_customer.sum()),
-        "nonpositive_quantity_rows": int(quantity.le(0).fillna(True).sum()),
-        "nonpositive_unit_price_rows": int(unit_price.le(0).fillna(True).sum()),
+        "missing_quantity_rows": int(is_missing_quantity.sum()),
+        "nonnumeric_quantity_rows": int(is_nonnumeric_quantity.sum()),
+        "nonpositive_quantity_rows": int(is_nonpositive_quantity.sum()),
+        "missing_unit_price_rows": int(is_missing_unit_price.sum()),
+        "nonnumeric_unit_price_rows": int(is_nonnumeric_unit_price.sum()),
+        "nonpositive_unit_price_rows": int(is_nonpositive_unit_price.sum()),
         "invalid_invoice_date_rows": int(invoice_date.isna().sum()),
         "exact_duplicate_rows": int(df.duplicated().sum()),
     }
@@ -87,7 +110,7 @@ def prepare_rfm_transactions(
     x["Quantity"] = pd.to_numeric(x["Quantity"], errors="coerce")
     x["UnitPrice"] = pd.to_numeric(x["UnitPrice"], errors="coerce")
 
-    anonymous = {label.casefold() for label in anonymous_customer_labels}
+    anonymous = {label.strip().casefold() for label in anonymous_customer_labels}
     valid_invoice = (
         x["InvoiceNo"].notna()
         & x["InvoiceNo"].ne("")
@@ -132,6 +155,8 @@ def score_rfm_metric(
         score = 6 - base_score
 
     ``rank(method="average")`` ensures equal raw values receive equal scores.
+    When the metric is constant, all observations receive neutral score 3
+    because there is no relative ordering information.
     """
     numeric = pd.to_numeric(series, errors="coerce")
 
@@ -148,6 +173,21 @@ def score_rfm_metric(
         pct=True,
         ascending=True,
     )
+    n_unique = int(numeric.nunique())
+
+    if n_unique == 1:
+        score = pd.Series(3, index=series.index, dtype="Int64")
+        metadata: dict[str, Any] = {
+            "method": "percentile_rank_average",
+            "rank_method": "average",
+            "n_unique": n_unique,
+            "higher_is_better": bool(higher_is_better),
+            "min_percentile_rank": float(percentile_rank.min()),
+            "max_percentile_rank": float(percentile_rank.max()),
+            "constant_metric": True,
+            "constant_score": 3,
+        }
+        return score, metadata
 
     base_score = pd.Series(
         np.ceil(percentile_rank.to_numpy(dtype=float) * 5).astype(int),
@@ -158,13 +198,15 @@ def score_rfm_metric(
     score = base_score if higher_is_better else (6 - base_score)
     score = score.clip(1, 5).astype("Int64")
 
-    metadata: dict[str, Any] = {
+    metadata = {
         "method": "percentile_rank_average",
         "rank_method": "average",
-        "n_unique": int(numeric.nunique()),
+        "n_unique": n_unique,
         "higher_is_better": bool(higher_is_better),
         "min_percentile_rank": float(percentile_rank.min()),
         "max_percentile_rank": float(percentile_rank.max()),
+        "constant_metric": False,
+        "constant_score": None,
     }
     return score, metadata
 

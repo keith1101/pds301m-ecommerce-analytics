@@ -11,6 +11,16 @@ from src.feature_engineering import (
 )
 
 
+ALLOWED_SEGMENTS = {
+    "Champions",
+    "Loyal Customers",
+    "At Risk",
+    "Potential Loyalists",
+    "Hibernating",
+    "Others",
+}
+
+
 def sample_transactions() -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -77,6 +87,44 @@ def test_rfm_does_not_silently_deduplicate_input():
     assert c8["Monetary"] == pytest.approx(30.0)
 
 
+def test_numeric_audit_separates_missing_nonnumeric_and_nonpositive_values():
+    df = pd.DataFrame({
+        "InvoiceNo": [f"1{i:04d}" for i in range(6)],
+        "Quantity": [1, None, "", "abc", 0, -1],
+        "InvoiceDate": ["2011-12-01"] * 6,
+        "UnitPrice": [1, None, "", "xyz", 0, -2],
+        "CustomerID": [str(i) for i in range(6)],
+    })
+
+    audit = audit_rfm_input(df)
+
+    assert audit["missing_quantity_rows"] == 2
+    assert audit["nonnumeric_quantity_rows"] == 1
+    assert audit["nonpositive_quantity_rows"] == 2
+    assert audit["missing_unit_price_rows"] == 2
+    assert audit["nonnumeric_unit_price_rows"] == 1
+    assert audit["nonpositive_unit_price_rows"] == 2
+
+
+def test_guest_variants_are_never_grouped_as_customers():
+    df = pd.DataFrame({
+        "InvoiceNo": ["10001", "10002", "10003", "10004", "10005"],
+        "Quantity": [1] * 5,
+        "InvoiceDate": ["2011-12-01"] * 5,
+        "UnitPrice": [10.0] * 5,
+        "CustomerID": ["Guest", "guest", "GUEST", "  Guest  ", "12345"],
+    })
+
+    audit = audit_rfm_input(df)
+    assert audit["anonymous_customer_rows"] == 4
+
+    valid = prepare_rfm_transactions(df)
+    assert valid["CustomerID"].tolist() == ["12345"]
+
+    rfm = calculate_rfm(df, reference_date="2011-12-02")
+    assert rfm["CustomerID"].tolist() == ["12345"]
+
+
 def test_equal_rfm_values_receive_equal_scores():
     rfm = calculate_rfm(sample_transactions(), reference_date="2011-12-10")
     c3 = rfm.loc[rfm["CustomerID"].eq("3")].iloc[0]
@@ -98,15 +146,55 @@ def test_percentile_rank_scoring_is_tie_safe():
     assert scores[values.eq(2)].nunique() == 1
     assert meta["method"] == "percentile_rank_average"
     assert meta["rank_method"] == "average"
+    assert meta["constant_metric"] is False
 
 
-def test_single_unique_value_is_stable_under_percentile_method():
+@pytest.mark.parametrize("higher_is_better", [True, False])
+@pytest.mark.parametrize("size", [1, 2, 3, 10])
+def test_constant_metric_receives_neutral_score(higher_is_better, size):
     scores, meta = score_rfm_metric(
-        pd.Series([7, 7, 7], dtype=float),
-        higher_is_better=True,
+        pd.Series([7.0] * size),
+        higher_is_better=higher_is_better,
     )
-    assert scores.tolist() == [4, 4, 4]
-    assert meta["method"] == "percentile_rank_average"
+
+    assert scores.tolist() == [3] * size
+    assert meta["n_unique"] == 1
+    assert meta["constant_metric"] is True
+    assert meta["constant_score"] == 3
+
+
+def test_small_nonconstant_dataset_keeps_percentile_method():
+    values = pd.Series([1.0, 2.0, 3.0])
+    scores, meta = score_rfm_metric(values, higher_is_better=True)
+
+    assert scores.tolist() == [2, 4, 5]
+    assert scores.is_monotonic_increasing
+    assert meta["n_unique"] == 3
+    assert meta["constant_metric"] is False
+    assert meta["constant_score"] is None
+
+
+def test_scoring_is_stable_under_row_reordering():
+    original = pd.Series([1, 1, 1, 2, 2, 3], dtype=float)
+    shuffled = original.sample(frac=1, random_state=42)
+
+    original_scores, _ = score_rfm_metric(original, higher_is_better=True)
+    shuffled_scores, _ = score_rfm_metric(shuffled, higher_is_better=True)
+
+    original_map = (
+        pd.DataFrame({"value": original, "score": original_scores})
+        .groupby("value")["score"]
+        .first()
+        .to_dict()
+    )
+    shuffled_map = (
+        pd.DataFrame({"value": shuffled, "score": shuffled_scores})
+        .groupby("value")["score"]
+        .first()
+        .to_dict()
+    )
+
+    assert original_map == shuffled_map
 
 
 def test_recency_direction_is_reversed():
@@ -148,31 +236,44 @@ def test_customer_segments_schema():
     assert rfm["RFM_total"].between(3, 15).all()
 
 
-def test_segment_precedence():
-    champion = pd.Series({"R_score": 5, "F_score": 5, "M_score": 5})
-    loyal = pd.Series({"R_score": 3, "F_score": 4, "M_score": 2})
-    at_risk = pd.Series({"R_score": 1, "F_score": 5, "M_score": 5})
+@pytest.mark.parametrize(
+    ("scores", "expected"),
+    [
+        ((5, 5, 5), "Champions"),
+        ((3, 4, 2), "Loyal Customers"),
+        ((2, 3, 1), "At Risk"),
+        ((5, 3, 1), "Potential Loyalists"),
+        ((1, 1, 1), "Hibernating"),
+        ((5, 1, 1), "Others"),
+    ],
+)
+def test_all_segment_rules_and_precedence(scores, expected):
+    r, f, m = scores
+    row = pd.Series({"R_score": r, "F_score": f, "M_score": m})
+    assert assign_rfm_segment(row) == expected
 
-    assert assign_rfm_segment(champion) == "Champions"
-    assert assign_rfm_segment(loyal) == "Loyal Customers"
-    assert assign_rfm_segment(at_risk) == "At Risk"
 
-def test_segment_labels_follow_six_label_contract():
-    allowed_segments = {
-        "Champions",
-        "Loyal Customers",
-        "At Risk",
-        "Potential Loyalists",
-        "Hibernating",
-        "Others",
-    }
-
+def test_segment_labels_follow_six_label_contract_without_new_customers():
     rfm = calculate_rfm(sample_transactions(), reference_date="2011-12-10")
-    assert set(rfm["Segment"]).issubset(allowed_segments)
 
-    # A recent, low-frequency score profile falls through to Others.
+    assert set(rfm["Segment"]).issubset(ALLOWED_SEGMENTS)
+    assert "New Customers" not in ALLOWED_SEGMENTS
+    assert "New Customers" not in set(rfm["Segment"])
+
     recent_low_frequency = pd.Series(
         {"R_score": 5, "F_score": 1, "M_score": 1}
     )
     assert assign_rfm_segment(recent_low_frequency) == "Others"
 
+
+def test_alphanumeric_non_cancelled_invoice_is_allowed():
+    df = pd.DataFrame({
+        "InvoiceNo": ["A563185"],
+        "Quantity": [1],
+        "InvoiceDate": ["2011-12-01"],
+        "UnitPrice": [10.0],
+        "CustomerID": ["12345"],
+    })
+
+    valid = prepare_rfm_transactions(df)
+    assert valid["InvoiceNo"].tolist() == ["A563185"]

@@ -114,7 +114,7 @@ Percentile rank: .333 .333 .333 .75 .75 1.0
 F_score:         2  2  2  4  4  5
 ```
 
-If every customer has the same raw value, all customers receive the same score because their average percentile ranks are equal.
+If every customer has the same raw value, the metric contains no relative ordering information. Issue #15 therefore assigns the neutral score `3` to every customer for that metric. This special case is independent of sample size and applies equally to Recency, Frequency and Monetary.
 
 ## 5. Segment rules and precedence
 
@@ -229,10 +229,12 @@ The prototype and automated tests cover:
 - missing/blank `InvoiceNo`;
 - missing `CustomerID`;
 - anonymous `Guest`;
-- non-positive quantity/price;
+- missing, blank, non-numeric and non-positive quantity/price are audited separately;
 - exact duplicates are audited and left untouched by the RFM layer;
+- anonymous `Guest` variants are excluded case-insensitively;
 - equal RFM values;
-- low-cardinality percentile-rank scoring;
+- constant R/F/M metrics receive neutral score `3`;
+- low-cardinality percentile-rank scoring and row-order stability;
 - reference-date correctness;
 - score range 1–5;
 - segment precedence;
@@ -276,3 +278,19 @@ Responsibilities:
 - `tests/test_rfm.py`: automated edge-case regression tests.
 
 `data/processed/customer_segments.csv` is deliberately **not** an Issue #5 deliverable.
+
+
+## 10. Issue #15 follow-up contract
+
+Issue #15 hardens this baseline before Issue #8 full-data segmentation. The agreed integration rules are:
+
+- `New Customers` is intentionally **not** part of the rule-based RFM baseline; `Frequency == 1` and RFM scores do not establish customer tenure.
+- Missing/blank `InvoiceNo` rows are ineligible for RFM.
+- Anonymous customer labels such as `Guest` are excluded case-insensitively and must never be grouped into one synthetic customer.
+- Exact duplicate handling belongs to the upstream cleaning pipeline. RFM only audits duplicates and does not remove them.
+- Missing, blank and non-numeric `Quantity`/`UnitPrice` values are reported separately from non-positive numeric values.
+- A constant R/F/M metric receives neutral score `3`; non-constant metrics continue to use average percentile ranks.
+- The production input for Issue #8 is expected at `data/processed/cleaned_retail.csv`. The RFM notebook does not download the UCI dataset automatically.
+- `CUSTOMER_SEGMENTS_COLUMNS` in `src.feature_engineering` is the single schema source for notebook/tests and the later Issue #8 export.
+
+Issue #15 does not perform the official full-data export or business analysis. Those remain Issue #8 responsibilities.
