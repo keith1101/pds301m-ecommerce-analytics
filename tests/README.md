@@ -1,7 +1,27 @@
 # tests/
 
-Nơi bổ sung kiểm thử khi pipeline được triển khai.
+Thư mục chứa automated tests cho data pipeline.
 
-Nội dung kiểm thử dự kiến: kiểu và schema dữ liệu, quy tắc lọc hóa đơn hủy, giá/số lượng không hợp lệ, công thức doanh thu, tính đúng của Recency/Frequency/Monetary và các trường hợp dữ liệu rỗng hoặc thiếu. Dùng dữ liệu mẫu nhỏ, không phụ thuộc vào file dataset lớn.
+Các test hiện tại kiểm tra:
 
-Hiện chưa có mã kiểm thử.
+- data cleaning;
+- duplicate handling;
+- missing `InvoiceNo`;
+- invalid `InvoiceDate`;
+- non-numeric `Quantity`;
+- non-numeric `UnitPrice`;
+- cancelled invoices;
+- Revenue calculation;
+- Revenue anomaly;
+- Quantity anomaly;
+- combined `IsAnomaly`;
+- empty DataFrame;
+- zero-IQR edge case;
+- anomaly CSV output;
+- Revenue / Quantity / Combined business impact;
+- RFM logic.
+
+Chạy toàn bộ test từ repository root:
+
+```bash
+python -m pytest -q

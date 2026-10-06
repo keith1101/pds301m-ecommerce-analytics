@@ -1,57 +1,159 @@
 # PDS301m — E-commerce Analytics
 
-Dự án phân tích dữ liệu thương mại điện tử cho môn PDS301m. Phạm vi ban đầu sử dụng **UCI Online Retail** để khám phá doanh thu, hành vi mua hàng, phân khúc khách hàng theo RFM và phát hiện đơn hàng bất thường.
+Dự án phân tích dữ liệu thương mại điện tử cho môn PDS301m sử dụng bộ dữ liệu UCI Online Retail.
 
-> Branch `develop` hiện chỉ chứa **cấu trúc thư mục và tài liệu hướng dẫn**. Chưa có mã nguồn, dataset, notebook hay kết quả phân tích.
+Project hiện bao gồm data-cleaning pipeline, feature engineering, anomaly detection, RFM analysis, automated tests, notebooks và analysis artifacts.
 
 ## Mục tiêu
 
-- Thu thập và tìm hiểu dữ liệu giao dịch bán lẻ.
-- Làm sạch, kiểm tra chất lượng và chuẩn hóa dữ liệu.
-- Phân tích doanh thu, sản phẩm và phân khúc khách hàng (Recency, Frequency, Monetary — RFM).
-- Khảo sát các đơn hàng bất thường và trực quan hóa kết quả.
-- Tổng hợp kết quả thành báo cáo có thể tái lập.
+- Làm sạch và kiểm tra chất lượng dữ liệu giao dịch.
+- Chuẩn hóa các trường dữ liệu quan trọng.
+- Tạo Revenue và các đặc trưng phục vụ phân tích.
+- Phân tích doanh thu và hành vi mua hàng.
+- Phân khúc khách hàng bằng RFM.
+- Phát hiện order anomaly theo Revenue và Quantity.
+- Tạo output và biểu đồ có khả năng tái lập.
 
-## Cấu trúc dự án
+## Project Structure
 
 ```text
 pds301m-ecommerce-analytics/
-├── README.md                 # Giới thiệu dự án và quy ước chung
+├── README.md
+├── requirements.txt
+├── pytest.ini
+│
 ├── data/
-│   ├── README.md             # Quy tắc quản lý dữ liệu
 │   ├── raw/
-│   │   └── README.md         # Dữ liệu gốc, không chỉnh sửa
 │   └── processed/
-│       └── README.md         # Dữ liệu sau khi xử lý
-├── notebooks/
-│   └── README.md             # Khám phá dữ liệu và thử nghiệm
+│
 ├── src/
-│   └── README.md             # Mã nguồn xử lý, phân tích (chưa triển khai)
+│   ├── data_processor.py
+│   ├── anomaly_detector.py
+│   ├── feature_engineering.py
+│   ├── main.py
+│   └── scraper.py
+│
+├── tests/
+│   ├── test_data_processor.py
+│   ├── test_anomaly_detector.py
+│   └── test_rfm.py
+│
+├── notebooks/
+│   └── 04_customer_segmentation.ipynb
+│
 ├── charts/
-│   └── README.md             # Biểu đồ và hình trực quan hóa
-├── reports/
-│   └── README.md             # Báo cáo, kết quả và diễn giải
+│   └── revenue_boxplot.png
+│
 ├── docs/
-│   └── README.md             # Đặc tả dữ liệu và phương pháp
-└── tests/
-    └── README.md             # Kiểm thử pipeline (chưa triển khai)
+│   ├── DATASET_STORAGE.md
+│   ├── rfm_methodology.md
+│   └── rfm_followup_issue15.md
+│
+└── reports/
 ```
 
-Mỗi thư mục có một `README.md` giải thích chức năng, loại tài liệu dự kiến và quy tắc sử dụng.
+## Data Pipeline
 
-## Quy trình dự kiến
+Pipeline chính:
 
-1. **Data ingestion:** Lấy bộ dữ liệu UCI Online Retail và lưu nguyên trạng trong `data/raw/`.
-2. **Preprocessing:** Kiểm tra dữ liệu thiếu, hóa đơn hủy, số lượng/giá trị không hợp lệ; lưu kết quả trong `data/processed/`.
-3. **Exploratory data analysis:** Khám phá phân phối và xu hướng trong `notebooks/`.
-4. **Analytics:** Phân tích doanh thu, sản phẩm, quốc gia; tính RFM và kiểm tra outlier bằng IQR hoặc Z-score.
-5. **Communication:** Xuất biểu đồ sang `charts/` và báo cáo sang `reports/`.
+```text
+Raw Dataset
+    ↓
+Validation
+    ↓
+Duplicate Handling
+    ↓
+Cancelled Invoice Separation
+    ↓
+Invalid Quantity / UnitPrice Filtering
+    ↓
+Feature Engineering
+    ↓
+Order Aggregation
+    ↓
+Revenue + Quantity IQR Detection
+    ↓
+Business Impact
+    ↓
+CSV + Chart Outputs
+```
 
-**Dữ liệu ban đầu:** [UCI Online Retail](https://archive.ics.uci.edu/dataset/352/online+retail). Nếu mở rộng sang web scraping, lưu dữ liệu từ nguồn bổ sung riêng, ghi lại nguồn và không trộn lẫn với giao dịch UCI khi chưa chuẩn hóa.
+## Anomaly Logic
 
-## Quy ước làm việc
+Hai loại anomaly được phát hiện:
 
-- `main`: nhánh ổn định; `develop`: nhánh tích hợp trong quá trình phát triển.
-- Tạo nhánh tính năng từ `develop`, mở pull request để review trước khi merge.
-- Không chỉnh sửa trực tiếp dữ liệu trong `data/raw/`. Các kết quả `processed`, `charts`, `reports` cần có khả năng tái tạo.
-- Chỉ thêm mã nguồn, thư viện và dữ liệu thực khi bắt đầu giai đoạn triển khai. Cập nhật README liên quan mỗi khi thay đổi cấu trúc hoặc quy trình.
+```text
+IsRevenueAnomaly
+IsQuantityAnomaly
+```
+
+Combined flag:
+
+```text
+IsAnomaly =
+IsRevenueAnomaly OR IsQuantityAnomaly
+```
+
+Các order được gắn anomaly chỉ được đánh dấu để review, không tự động bị xóa.
+
+## Setup
+
+Cài dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Dataset gốc cần được đặt tại:
+
+```text
+data/raw/online_retail.xlsx
+```
+
+## Run Pipeline
+
+Từ repository root:
+
+```bash
+python src/main.py
+```
+
+Pipeline tạo:
+
+```text
+data/processed/cleaned_retail.csv
+data/processed/cancelled_retail.csv
+data/processed/anomaly_orders.csv
+charts/revenue_boxplot.png
+```
+
+## Run Tests
+
+```bash
+python -m pytest -q
+```
+
+## Data Storage
+
+Raw dataset và processed CSV không được commit vào Git.
+
+Chi tiết reproducibility và dataset contract:
+
+```text
+docs/DATASET_STORAGE.md
+```
+
+Các chart phục vụ review/report được track trong Git.
+
+## Branch Workflow
+
+- `main`: stable branch.
+- `develop`: integration branch.
+- Feature/fix branch được tạo từ `develop`.
+- Mọi thay đổi cần qua pull request trước khi merge vào `develop`.
+
+## Dataset
+
+UCI Online Retail:
+
+https://archive.ics.uci.edu/dataset/352/online+retail
