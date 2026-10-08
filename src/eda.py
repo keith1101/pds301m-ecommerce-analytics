@@ -5,7 +5,7 @@ import seaborn as sns
 
 # Mã dịch vụ/phí: không phải hàng hóa, loại khỏi bảng xếp hạng sản phẩm
 # nhưng vẫn giữ trong tổng doanh thu.
-SERVICE_CODES = ['DOT', 'POST', 'M', 'AMAZONFEE']
+SERVICE_CODES = ['DOT', 'POST', 'M', 'AMAZONFEE', 'm', 'DCGSSBOY', 'DCGSSGIRL', 'S', 'PADS', 'B']
 
 
 def load_cleaned_data(base_path):
