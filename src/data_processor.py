@@ -226,6 +226,17 @@ class RetailDataProcessor:
             f"£{self.df_valid['Revenue'].sum():,.2f}"
         )
 
+    def analyze_revenue(self):
+        """Phân tích doanh thu"""
+        from eda import total_revenue, revenue_by_month, revenue_by_country, top_products
+        return {
+            'total': total_revenue(self.df_valid),
+            'by_month': revenue_by_month(self.df_valid),
+            'by_country': revenue_by_country(self.df_valid),
+            'top_products': top_products(self.df_valid),
+        }
+
+
     def export_data(
         self,
         clean_path: str | Path,
