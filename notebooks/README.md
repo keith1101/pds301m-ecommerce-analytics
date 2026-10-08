@@ -1,7 +1,10 @@
 # notebooks/
 
-Nơi làm việc với Jupyter Notebook để khám phá dữ liệu (EDA), thử nghiệm giả thuyết, so sánh phương pháp và tạo kết quả minh họa.
+Jupyter notebooks are used for exploratory analysis, validation and reproducible project deliverables. Stable reusable transformations live in `src/`; notebooks import those functions rather than duplicating business logic.
 
-Notebook dự kiến cho: khảo sát chất lượng dữ liệu, doanh thu/sản phẩm, phân khúc RFM và phát hiện đơn hàng bất thường. Các bước xử lý ổn định, cần tái sử dụng nên được chuyển sang `src/`; tránh sao chép logic giữa nhiều notebook.
+Current notebooks:
 
-Hiện chưa có notebook.
+- `04_customer_segmentation.ipynb` — Issue #8 production RFM segmentation, validation, customer/segment analysis, chart generation and local `customer_segments.csv` export.
+- `05_python_oop_demo.ipynb` — Python/OOP demonstration for the project pipeline.
+
+For `04_customer_segmentation.ipynb`, place the latest reviewed dataset at `data/processed/cleaned_retail.csv` before execution.
