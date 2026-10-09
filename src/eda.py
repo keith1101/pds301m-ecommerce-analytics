@@ -5,13 +5,14 @@ import seaborn as sns
 
 # Mã dịch vụ/phí: không phải hàng hóa, loại khỏi bảng xếp hạng sản phẩm
 # nhưng vẫn giữ trong tổng doanh thu.
-SERVICE_CODES = ['DOT', 'POST', 'M', 'AMAZONFEE', 'm', 'DCGSSBOY', 'DCGSSGIRL', 'S', 'PADS', 'B']
+SERVICE_CODES = ['DOT', 'POST', 'M', 'm', 'AMAZONFEE', 'B']
 
 
 def load_cleaned_data(base_path):
     """Đọc cleaned_retail.csv thành DataFrame."""
+    data_path = Path(base_path) / 'data' / 'processed' / 'cleaned_retail.csv'
     return pd.read_csv(
-        base_path + '\\data\\processed\\cleaned_retail.csv',
+        data_path,
         dtype={'InvoiceNo': str},
     )
 
@@ -59,19 +60,37 @@ def main():
     print('Shape:', df.shape)
     print('Total revenue:', round(total_revenue(df), 2))
 
-    save_chart(revenue_by_month(df), base_path + '\\charts\\revenue_monthly_line.png',
-               kind='line', xlabel='YearMonth')
-    save_chart(revenue_by_country(df).head(10), base_path + '\\charts\\revenue_country.png',
-               xlabel='Country')
-    save_chart(top_products(df, metric='Quantity'), base_path + '\\charts\\top_products_quantity.png',
-               xlabel='StockCode')
-    save_chart(top_products(df, metric='Revenue'), base_path + '\\charts\\top_products_revenue.png',
-               xlabel='StockCode')
+    charts_path = Path(base_path) / 'charts'
+
+    save_chart(
+        revenue_by_month(df),
+        charts_path / 'revenue_monthly_line.png',
+        kind='line',
+        xlabel='YearMonth'
+    )
+
+    save_chart(
+        revenue_by_country(df).head(10),
+        charts_path / 'revenue_country.png',
+        xlabel='Country'
+    )
+
+    save_chart(
+        top_products(df, metric='Quantity'),
+        charts_path / 'top_products_quantity.png',
+        xlabel='StockCode'
+    )
+
+    save_chart(
+        top_products(df, metric='Revenue'),
+        charts_path / 'top_products_revenue.png',
+        xlabel='StockCode'
+    )
 
     plt.figure()
     sns.boxplot(x=order_values(df))
     plt.tight_layout()
-    plt.savefig(base_path + '\\charts\\order_value_boxplot.png')
+    plt.savefig(charts_path / 'order_value_bloxplot.png')
     plt.close()
 
 
