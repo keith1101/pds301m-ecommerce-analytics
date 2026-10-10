@@ -9,3 +9,8 @@ Existing EDA/anomaly charts are retained. Issue #8 generates the following custo
 - `rfm_monetary_distribution.png`
 - `rfm_customer_count_by_segment.png`
 - `rfm_revenue_by_segment.png`
+
+## Quy ước đặt tên
+
+- `final_*.png`: chart do `notebooks/06_final_integrated_analysis.ipynb` (#22) sinh ra, dùng trong `reports/final_analytics_report.md` (#19).
+- Các chart còn lại: output của từng phase phân tích (EDA #7, RFM #8, anomaly #6), được cite trong report tương ứng. Giữ lại làm evidence từng phase.
