@@ -65,7 +65,7 @@ pds301m-ecommerce-analytics/
 ## Entry points
 
 - `notebooks/06_final_integrated_analysis.ipynb`: luồng phân tích tích hợp end-to-end (#22), import từ `src/`.
-- Mỗi module trong `src/` có `main()` riêng, chạy độc lập từ repo root, ví dụ: `python src/eda.py`, `python src/reconcile.py`.
+- Chạy độc lập từng module phân tích từ repo root: `python src/eda.py`, `python src/reconcile.py`.
 
 ## Data Pipeline
 
