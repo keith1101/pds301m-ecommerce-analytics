@@ -3,20 +3,21 @@
 ## 1. Mục đích
 Đối chiếu chéo các chỉ số cốt lõi giữa pipeline làm sạch (#16), phân tích doanh thu (#7) và phân khúc RFM (#8), đảm bảo không có mâu thuẫn nào không giải thích được trước khi làm notebook và report cuối (#22, #19).
 
-## 2. Bảng reconciliation
+## 2. KPI Reconciliation
 
-| Metric | Population | Nguồn | Giá trị | Kết luận |
-|---|---|---|---|---|
-| Total Revenue (cleaned) | 524,878 giao dịch hợp lệ | `cleaned_retail.csv` | £10,642,110.80 | Baseline |
-| Total Revenue (EDA) | cùng population | `eda.total_revenue()` | £10,642,110.80 | = baseline ✅ |
-| Revenue non-Guest | CustomerID != Guest | cleaned | £8,887,208.89 | = baseline − Guest |
-| Revenue Guest | CustomerID == Guest | cleaned | £1,754,901.91 | Chênh lệch chủ đích |
-| Total Monetary (RFM) | CustomerID hợp lệ | `customer_segments.csv` | £8,887,208.89 | = non-Guest ✅ |
-| Revenue theo segment (6 nhóm) | CustomerID hợp lệ | merge CustomerID | £8,887,208.89 | = non-Guest ✅ |
-| Dòng trùng trong file cleaned | — | cleaned | 0 | Đã loại ở pipeline (5,268 dòng, £21,740.98) |
-| Hóa đơn hủy | prefix C | `cancelled_retail.csv` | 9,251 hóa đơn | Khớp audit report |
-| Dòng invalid còn sót | Qty/Price <= 0 | cleaned | 0 | Đã loại ở pipeline (2,512 dòng) |
-
+| Metric | Population | Value | Expected relationship | Status |
+|---|---|---:|---|---|
+| Total Revenue | Valid sales | £10,642,110.80 | Baseline | Y |
+| EDA Revenue | Valid sales | £10,642,110.80 | = Total Revenue | Y |
+| Non-Guest Revenue | Identified customers | £8,887,208.89 | Total − Guest | Y |
+| Guest Revenue | Anonymous customers | £1,754,901.91 | Intentional difference | Y |
+| RFM Monetary | Identified customers | £8,887,208.89 | = Non-Guest Revenue | Y |
+| Revenue by RFM Segment | Identified customers | £8,887,208.89 | = RFM Monetary | Y |
+| Duplicate rows in cleaned data | Cleaned output | 0 | Expected 0 | Y |
+| Invalid Qty/Price rows | Cleaned output | 0 | Expected 0 | Y |
+| Duplicate lines removed by pipeline (#16) | Raw input | 5,268 (£21,740.98) | Removed before analysis | Y |
+| Invalid Qty/Price lines removed by pipeline (#16) | Raw input | 2,512 | Removed before analysis | Y |
+| Cancelled rows | Cancelled dataset | 9,251 | Separated from valid sales | Y |
 Định nghĩa chung: `Revenue = Quantity × UnitPrice`, chỉ tính trên giao dịch bán hợp lệ (không phải hóa đơn hủy, Quantity và UnitPrice > 0).
 
 ## 3. Chênh lệch chủ đích
