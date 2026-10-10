@@ -90,7 +90,7 @@ def main():
     plt.figure()
     sns.boxplot(x=order_values(df))
     plt.tight_layout()
-    plt.savefig(charts_path / 'order_value_bloxplot.png')
+    plt.savefig(charts_path / 'order_value_boxplot.png')
     plt.close()
 
 
