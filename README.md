@@ -22,7 +22,7 @@ pds301m-ecommerce-analytics/
 ├── requirements.txt
 ├── pytest.ini
 │
-├── data/
+├── data/                  # file dữ liệu không commit lên git (xem docs/DATASET_STORAGE.md)
 │   ├── raw/
 │   └── processed/
 │
@@ -30,27 +30,42 @@ pds301m-ecommerce-analytics/
 │   ├── data_processor.py
 │   ├── anomaly_detector.py
 │   ├── feature_engineering.py
-│   ├── main.py
+│   ├── eda.py
+│   ├── business_rules.py
+│   ├── reconcile.py
 │   └── scraper.py
 │
 ├── tests/
 │   ├── test_data_processor.py
 │   ├── test_anomaly_detector.py
-│   └── test_rfm.py
+│   ├── test_rfm.py
+│   └── test_rfm_integration.py
 │
 ├── notebooks/
-│   └── 04_customer_segmentation.ipynb
+│   ├── 04_customer_segmentation.ipynb
+│   ├── 05_python_oop_demo.ipynb
+│   └── 06_final_integrated_analysis.ipynb
 │
-├── charts/
-│   └── revenue_boxplot.png
+├── charts/                # `final_*` = chart do notebook 06 sinh cho final report
 │
 ├── docs/
 │   ├── DATASET_STORAGE.md
 │   ├── rfm_methodology.md
-│   └── rfm_followup_issue15.md
+│   ├── rfm_followup_issue15.md
+│   ├── issue22_handoff.md
+│   └── iqr.svg
 │
 └── reports/
+    ├── revenue_product_eda.md
+    ├── kpi_reconciliation.md
+    ├── final_analytics_report.md
+    └── final_evidence_notes.md
 ```
+
+## Entry points
+
+- `notebooks/06_final_integrated_analysis.ipynb`: luồng phân tích tích hợp end-to-end (#22), import từ `src/`.
+- Mỗi module trong `src/` có `main()` riêng, chạy độc lập từ repo root, ví dụ: `python src/eda.py`, `python src/reconcile.py`.
 
 ## Data Pipeline
 
