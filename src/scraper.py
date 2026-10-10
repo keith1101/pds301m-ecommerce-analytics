@@ -93,7 +93,6 @@ def scrape_books(start_url, rating_map, max_pages=None):
                 class_="product_pod"
             )
 
-            # TODO 1:
             # Duyệt book_tags, gọi parse_book()
             # và lưu kết quả vào books_data
 
@@ -114,16 +113,13 @@ def scrape_books(start_url, rating_map, max_pages=None):
             ):
                 break
 
-            # TODO 2:
             # Tìm nút Next.
             # Nếu không còn Next, thoát vòng lặp.
             next_button = page_soup.select_one("li.next a")
             if next_button is None:
                 break
-            # TODO 3:
             # Cập nhật current_url bằng urljoin()
             current_url = urljoin(current_url, next_button.get("href"))
-            # TODO 4:
             # Nghỉ 1 giây trước request tiếp theo
             time.sleep(1)
 
