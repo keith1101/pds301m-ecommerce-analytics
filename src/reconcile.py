@@ -4,10 +4,10 @@ from pathlib import Path
 
 def load_inputs(base_path):
     """Đọc cleaned_retail.csv, customer_segments.csv, cancelled_retail.csv."""
-    proc = base_path + "\\data\\processed\\"
-    cr1 = pd.read_csv(proc + "cleaned_retail.csv", dtype={"InvoiceNo": str})
-    cs = pd.read_csv(proc + "customer_segments.csv", dtype={"CustomerID": str})
-    cr2 = pd.read_csv(proc + "cancelled_retail.csv")
+    proc = Path(base_path) / 'data' / 'processed' 
+    cr1 = pd.read_csv(proc / 'cleaned_retail.csv', dtype={"InvoiceNo": str})
+    cs = pd.read_csv(proc / 'customer_segments.csv', dtype={"CustomerID": str})
+    cr2 = pd.read_csv(proc / 'cancelled_retail.csv', dtype={"InvoiceNo": str})
     return cr1, cs, cr2
 
 
@@ -44,7 +44,18 @@ def main():
     print("Revenue totals (total, non-Guest, Guest):", revenue_totals(cr1))
     print("RFM Monetary total:", rfm_monetary_total(cs))
     print("Quality counts (dup, invalid, cancelled):", data_quality_counts(cr1, cr2))
-    revenue_by_segment(cr1, cs, base_path + '\\data\\processed\\revenue_by_segment.csv')
+    output_path = (
+    Path(base_path)
+        / 'data'
+        / 'processed'
+        / 'revenue_by_segment.csv'
+    )
+
+    revenue_by_segment(
+        cr1,
+        cs,
+        output_path
+    )
     print("Saved revenue_by_segment.csv")
 
 
