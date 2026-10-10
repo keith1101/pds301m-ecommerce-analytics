@@ -47,7 +47,6 @@ Chart:
 - 9 nước tiếp theo (Netherlands, EIRE, Germany, France, Australia, Spain, Switzerland, Belgium, Sweden) cộng lại chỉ ~15%.
 
 ### 3.4 Top sản phẩm
-### 3.4 Top sản phẩm
 
 Các mã dịch vụ hoặc bút toán không đại diện cho sản phẩm vật lý được loại khỏi bảng xếp hạng sản phẩm, nhưng vẫn được giữ trong tổng doanh thu:
 

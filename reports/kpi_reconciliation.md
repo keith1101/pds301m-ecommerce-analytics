@@ -15,6 +15,8 @@
 | Revenue by RFM Segment | Identified customers | £8,887,208.89 | = RFM Monetary | Y |
 | Duplicate rows in cleaned data | Cleaned output | 0 | Expected 0 | Y |
 | Invalid Qty/Price rows | Cleaned output | 0 | Expected 0 | Y |
+| Duplicate lines removed by pipeline (#16) | Raw input | 5,268 (£21,740.98) | Removed before analysis | Y |
+| Invalid Qty/Price lines removed by pipeline (#16) | Raw input | 2,512 | Removed before analysis | Y |
 | Cancelled rows | Cancelled dataset | 9,251 | Separated from valid sales | Y |
 Định nghĩa chung: `Revenue = Quantity × UnitPrice`, chỉ tính trên giao dịch bán hợp lệ (không phải hóa đơn hủy, Quantity và UnitPrice > 0).
 
