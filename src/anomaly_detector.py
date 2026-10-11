@@ -44,7 +44,7 @@ class OrderAnomalyDetector:
 
     def analyze_cancelled_orders(self) -> dict:
         print(
-            "\n=== 1. THỐNG KÊ HÓA ĐƠN HỦY/HOÀN TRẢ ==="
+            "\n=== 1. CANCELLED / RETURNED INVOICE STATISTICS ==="
         )
 
         if self.df_cancelled.empty:
@@ -54,7 +54,7 @@ class OrderAnomalyDetector:
                 'total_returned_qty': 0
             }
 
-            print("- Không có dữ liệu hóa đơn hủy.")
+            print("- No cancelled invoice data available.")
 
             return stats
 
@@ -79,17 +79,17 @@ class OrderAnomalyDetector:
         }
 
         print(
-            f"- Số hóa đơn hủy duy nhất:          "
+            f"- Distinct cancelled invoices:       "
             f"{num_invoices:,}"
         )
 
         print(
-            f"- Số dòng giao dịch hủy:            "
+            f"- Cancelled transaction rows:        "
             f"{num_lines:,}"
         )
 
         print(
-            f"- Tổng số lượng sản phẩm hoàn trả:  "
+            f"- Total returned product quantity:   "
             f"{total_returned_qty:,}"
         )
 
@@ -249,40 +249,40 @@ class OrderAnomalyDetector:
         })
 
         print(
-            "\n=== 2. PHÁT HIỆN NGOẠI LỆ GIÁ TRỊ CAO "
+            "\n=== 2. HIGH-VALUE ANOMALY DETECTION "
             "(UPPER-TAIL IQR) ==="
         )
 
         print(
-            f"- Doanh thu (Revenue): "
+            f"- Revenue: "
             f"Q1=£{q1_rev:,.2f}, "
             f"Q3=£{q3_rev:,.2f}, "
             f"IQR=£{iqr_rev:,.2f} "
-            f"-> Ngưỡng Q3 + 1.5*IQR "
+            f"-> Threshold Q3 + 1.5*IQR "
             f"= £{ub_rev:,.2f}"
         )
 
         print(
-            f"- Số lượng (Quantity): "
+            f"- Quantity: "
             f"Q1={q1_qty:,.1f}, "
             f"Q3={q3_qty:,.1f}, "
             f"IQR={iqr_qty:,.1f} "
-            f"-> Ngưỡng Q3 + 1.5*IQR "
+            f"-> Threshold Q3 + 1.5*IQR "
             f"= {ub_qty:,.1f}"
         )
 
         print(
-            f"- Số đơn ngoại lệ theo Revenue:     "
+            f"- Revenue anomaly orders:            "
             f"{int(self.order_stats['IsRevenueAnomaly'].sum()):,}"
         )
 
         print(
-            f"- Số đơn ngoại lệ theo Quantity:    "
+            f"- Quantity anomaly orders:           "
             f"{int(self.order_stats['IsQuantityAnomaly'].sum()):,}"
         )
 
         print(
-            f"- Số đơn ngoại lệ Combined:         "
+            f"- Combined anomaly orders:           "
             f"{int(self.order_stats['IsAnomaly'].sum()):,}"
         )
 
@@ -460,40 +460,40 @@ class OrderAnomalyDetector:
         )
 
         print(
-            "\n=== 3. TÁC ĐỘNG BUSINESS "
-            "CỦA ANOMALY ==="
+            "\n=== 3. BUSINESS IMPACT "
+            "OF ANOMALIES ==="
         )
 
         print(
-            f"- Tổng doanh thu: "
+            f"- Total revenue: "
             f"£{total_revenue:,.2f}"
         )
 
         print(
             "- Revenue anomaly: "
-            f"{revenue_impact['anomaly_orders']:,} đơn, "
+            f"{revenue_impact['anomaly_orders']:,} orders, "
             f"£{revenue_impact['anomaly_revenue']:,.2f} "
             f"({revenue_impact['revenue_ratio']:.2f}% revenue)"
         )
 
         print(
             "- Quantity anomaly: "
-            f"{quantity_impact['anomaly_orders']:,} đơn, "
+            f"{quantity_impact['anomaly_orders']:,} orders, "
             f"£{quantity_impact['anomaly_revenue']:,.2f} "
             f"({quantity_impact['revenue_ratio']:.2f}% revenue)"
         )
 
         print(
             "- Combined anomaly: "
-            f"{combined_impact['anomaly_orders']:,} đơn, "
+            f"{combined_impact['anomaly_orders']:,} orders, "
             f"£{combined_impact['anomaly_revenue']:,.2f} "
             f"({combined_impact['revenue_ratio']:.2f}% revenue)"
         )
 
         print(
-            "- Nhận xét: Các đơn vượt ngưỡng IQR "
-            "được gắn cờ để review; không tự động "
-            "xóa chỉ vì có Revenue hoặc Quantity lớn."
+            "- Note: Orders exceeding IQR thresholds "
+            "are flagged for business review; not automatically "
+            "deleted due to high Revenue or Quantity."
         )
 
         return {
