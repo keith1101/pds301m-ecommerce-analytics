@@ -1,6 +1,6 @@
 # PDS301m — E-commerce Analytics
 
-Dự án phân tích dữ liệu thương mại điện tử cho môn PDS301m sử dụng bộ dữ liệu UCI Online Retail.
+Dự án phân tích dữ liệu thương mại điện tử cho môn PDS301m (team G3), sử dụng bộ dữ liệu UCI Online Retail.
 
 Project hiện bao gồm data-cleaning pipeline, feature engineering, anomaly detection, RFM analysis, automated tests, notebooks và analysis artifacts.
 
@@ -22,18 +22,20 @@ pds301m-ecommerce-analytics/
 ├── requirements.txt
 ├── pytest.ini
 │
-├── data/                  # file dữ liệu không commit lên git (xem docs/DATASET_STORAGE.md)
-│   ├── raw/
-│   └── processed/
+├── data/                      # KHÔNG commit lên Git (xem docs/DATASET_STORAGE.md)
+│   ├── raw/                   # đặt online_retail.xlsx tại đây
+│   └── processed/             # cleaned_retail.csv, cancelled_retail.csv, ...
 │
 ├── src/
-│   ├── data_processor.py
-│   ├── anomaly_detector.py
-│   ├── feature_engineering.py
-│   ├── eda.py
-│   ├── business_rules.py
-│   ├── reconcile.py
-│   └── scraper.py
+│   ├── data_processor.py      # RetailDataProcessor: validation, cleaning,
+│   │                          # cancelled-invoice separation, feature engineering
+│   ├── anomaly_detector.py    # OrderAnomalyDetector: IQR Revenue/Quantity
+│   │                          # anomaly, business impact, chart generation
+│   ├── feature_engineering.py # RFM / customer feature engineering
+│   ├── eda.py                 # Revenue & Product EDA (có main() chạy độc lập)
+│   ├── reconcile.py           # KPI reconciliation (có main() chạy độc lập)
+│   ├── business_rules.py      # business rules phục vụ #21
+│   └── scraper.py             # web scraping bổ sung (books.toscrape.com)
 │
 ├── tests/
 │   ├── test_data_processor.py
@@ -41,18 +43,19 @@ pds301m-ecommerce-analytics/
 │   ├── test_rfm.py
 │   └── test_rfm_integration.py
 │
-├── notebooks/
-│   ├── 04_customer_segmentation.ipynb
-│   ├── 05_python_oop_demo.ipynb
-│   └── 06_final_integrated_analysis.ipynb
+├── notebooks/                 # exploration & deliverables; logic tái dùng
+│   │                          # nằm ở src/, notebook chỉ import
+│   ├── 04_customer_segmentation.ipynb   # RFM segmentation (#8)
+│   ├── 05_python_oop_demo.ipynb        # Python/OOP demo (#21)
+│   └── 06_final_integrated_analysis.ipynb  # final integration (#22)
 │
-├── charts/                # `final_*` = chart do notebook 06 sinh cho final report
+├── charts/                    # PNG được track trong Git (xem quy ước đặt tên)
 │
 ├── docs/
-│   ├── DATASET_STORAGE.md
-│   ├── rfm_methodology.md
+│   ├── DATASET_STORAGE.md     # dataset contract & reproducibility
+│   ├── rfm_methodology.md     # phương pháp RFM
 │   ├── rfm_followup_issue15.md
-│   ├── issue22_handoff.md
+│   ├── issue22_handoff.md     # handoff notebook 06
 │   └── iqr.svg
 │
 └── reports/
@@ -62,110 +65,143 @@ pds301m-ecommerce-analytics/
     └── final_evidence_notes.md
 ```
 
-## Entry points
+## File nào được Git track, file nào phải tự chuẩn bị
 
-- `notebooks/06_final_integrated_analysis.ipynb`: luồng phân tích tích hợp end-to-end (#22), import từ `src/`.
-- Chạy độc lập từng module phân tích từ repo root: `python src/eda.py`, `python src/reconcile.py`.
+| Nhóm | Git track | Lấy / tái tạo ở local |
+|---|---|---|
+| Source, tests, notebooks, charts, reports, docs | Có | |
+| `data/raw/online_retail.xlsx` | Không | Tải từ UCI (link bên dưới), đặt đúng path |
+| `data/processed/*.csv` | Không | Chạy pipeline / đặt file CSV của team vào đúng path |
 
-## Data Pipeline
-
-Pipeline chính:
-
-```text
-Raw Dataset
-    ↓
-Validation
-    ↓
-Duplicate Handling
-    ↓
-Cancelled Invoice Separation
-    ↓
-Invalid Quantity / UnitPrice Filtering
-    ↓
-Feature Engineering
-    ↓
-Order Aggregation
-    ↓
-Revenue + Quantity IQR Detection
-    ↓
-Business Impact
-    ↓
-CSV + Chart Outputs
-```
-
-## Anomaly Logic
-
-Hai loại anomaly được phát hiện:
-
-```text
-IsRevenueAnomaly
-IsQuantityAnomaly
-```
-
-Combined flag:
-
-```text
-IsAnomaly =
-IsRevenueAnomaly OR IsQuantityAnomaly
-```
-
-Các order được gắn anomaly chỉ được đánh dấu để review, không tự động bị xóa.
+`.gitignore` chỉ loại trừ `data/raw/*` và `data/processed/*` (ngoại trừ `.gitkeep`). Charts và reports **được track** để phục vụ review.
 
 ## Setup
 
-Cài dependencies:
+Yêu cầu Python 3.9+.
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-Dataset gốc cần được đặt tại:
+## Data Preparation
 
-```text
-data/raw/online_retail.xlsx
-```
+1. Tải UCI Online Retail dataset: https://archive.ics.uci.edu/dataset/352/online+retail
+2. Đặt file tại `data/raw/online_retail.xlsx` (đúng tên file, chữ thường).
+3. Chạy cleaning pipeline để tạo `data/processed/cleaned_retail.csv`,
+   `data/processed/cancelled_retail.csv` (xem mục Run Pipeline).
+4. File `data/processed/customer_segments.csv` được tạo bởi notebook 04.
 
-## Run Pipeline
+Chi tiết data contract (schema, quy tắc Quantity/UnitPrice, chính sách duplicate,
+công thức `Revenue = Quantity x UnitPrice`): `docs/DATASET_STORAGE.md`.
 
-Từ repository root:
+Lưu ý: dữ liệu `raw/` là bản gốc, không chỉnh sửa/ghi đè/xóa bản ghi bằng tay.
+Dữ liệu `processed/` phải tái tạo được từ pipeline trong `src/` hoặc notebooks,
+không sửa output bằng tay.
+
+Quy ước dữ liệu của team: chỉ dùng UCI dataset cho phân tích doanh thu/khách hàng.
+
+## Run
+
+### Entry point chính
+
+`notebooks/06_final_integrated_analysis.ipynb` là luồng phân tích tích hợp
+end-to-end (#22), import logic từ `src/` thay vì copy code.
 
 ```bash
-python src/main.py
+jupyter notebook
 ```
 
-Pipeline tạo:
+Mở notebook 06 rồi **Restart Kernel → Run All**. Notebook tự tìm repo root
+bằng pathlib, chạy được từ thư mục repo root hoặc `notebooks/`.
+Input CSVs được đọc từ `data/processed/`; các assert trong notebook kiểm tra
+KPI khớp với số liệu đã reconcile ở #18.
 
-```text
-data/processed/cleaned_retail.csv
-data/processed/cancelled_retail.csv
-data/processed/anomaly_orders.csv
-charts/revenue_boxplot.png
+### Run pipeline modules
+
+Cleaning pipeline chạy qua class `RetailDataProcessor`:
+
+```python
+from pathlib import Path
+from src.data_processor import RetailDataProcessor
+
+p = RetailDataProcessor(Path("data/raw/online_retail.xlsx"))
+df = p.load_and_explore()
+p.clean_data(deduplicate=True, fill_guest=True)
+p.export_data(
+    Path("data/processed/cleaned_retail.csv"),
+    Path("data/processed/cancelled_retail.csv"),
+)
 ```
+
+Các module phân tích chạy độc lập từ repo root (cần `data/processed/*.csv` đã có):
+
+```bash
+python src/eda.py
+python src/reconcile.py
+```
+
+`src/scraper.py` chạy scraping bổ sung (Books to Scrape: title/price/rating).
 
 ## Run Tests
+
+Từ repository root:
 
 ```bash
 python -m pytest -q
 ```
 
-## Data Storage
+Tests hiện tại kiểm tra: data cleaning, duplicate handling, missing `InvoiceNo`,
+invalid `InvoiceDate`, non-numeric `Quantity`/`UnitPrice`, cancelled invoices,
+Revenue calculation, Revenue anomaly, Quantity anomaly, combined `IsAnomaly`,
+empty DataFrame, zero-IQR edge case, anomaly CSV output, business impact
+(Revenue/Quantity/Combined) và RFM logic.
 
-Raw dataset và processed CSV không được commit vào Git.
+`tests/test_rfm_integration.py` cần file `data/processed/cleaned_retail.csv`
+ở local; test này tự skip khi file chưa có.
 
-Chi tiết reproducibility và dataset contract:
+## Charts
 
-```text
-docs/DATASET_STORAGE.md
-```
+Charts do notebook/source sinh ra, được track trong Git để review.
 
-Các chart phục vụ review/report được track trong Git.
+Quy ước đặt tên:
+
+- `final_*.png`: chart do `notebooks/06_final_integrated_analysis.ipynb` (#22)
+  sinh ra, dùng trong `reports/final_analytics_report.md` (#19).
+- Các chart còn lại: output của từng phase phân tích (EDA #7, RFM #8,
+  anomaly #6), được cite trong report tương ứng. Giữ lại làm evidence từng phase.
+
+## Reports
+
+- `reports/revenue_product_eda.md`: phân tích Revenue & Product (#7).
+- `reports/kpi_reconciliation.md`: đối chiếu KPI giữa các pipeline (#18).
+- `reports/final_analytics_report.md`: báo cáo phân tích cuối cùng (#19),
+  kèm bảng traceability claim → evidence.
+- `reports/final_evidence_notes.md`: ghi chú evidence bổ sung (#19).
+
+Mỗi report nêu rõ câu hỏi nghiên cứu, nguồn và phạm vi dữ liệu, phương pháp,
+kết quả, giới hạn và đường dẫn đến biểu đồ minh họa.
+
+## Phương pháp
+
+**RFM (Recency, Frequency, Monetary):** phân khúc khách hàng theo hành vi mua sắm.
+Recency = ngày phân tích trừ ngày mua gần nhất; Frequency = số đơn hợp lệ trong kỳ;
+Monetary = tổng giá trị mua trong kỳ.
+
+**IQR (Interquartile Range):** phát hiện outlier. `IQR = Q3 - Q1`; outlier là giá trị
+ngoài khoảng `[Q1 - 1.5*IQR, Q3 + 1.5*IQR]`. Order bị flag anomaly chỉ được đánh dấu
+để review, không tự động xóa.
+
+**ABC:** phân loại sản phẩm theo doanh thu. Tính tổng revenue từng sản phẩm, sắp xếp
+giảm dần, tính tỷ lệ đóng góp và tỷ lệ tích lũy, rồi phân loại A/B/C theo ngưỡng.
 
 ## Branch Workflow
 
-- `main`: stable branch.
-- `develop`: integration branch.
-- Feature/fix branch được tạo từ `develop`.
-- Mọi thay đổi cần qua pull request trước khi merge vào `develop`.
+- `develop`: integration branch. Mọi thay đổi qua pull request trước khi merge.
+- `main`: stable branch, hiện đang cũ (từ 24/09). Release `develop → main`
+  chỉ thực hiện sau khi P4 QA đạt (issue #20).
+- Feature/fix branch tạo từ `develop`, đặt tên theo issue.
+
+Không commit dataset lớn, file tạm, credential hoặc path máy cá nhân.
 
 ## Dataset
 
