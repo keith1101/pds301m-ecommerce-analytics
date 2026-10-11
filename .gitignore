@@ -40,3 +40,8 @@ data/processed/*
 Thumbs.db
 desktop.ini
 scraper_tmp.py
+reports/KichBanThuyetTrinh_G3.docx
+reports/KichBanThuyetTrinh_G3.md
+reports/PDS301m_G3_BaoCaoTongKet_backup.docx
+reports/PDS301m_G3_KichBanThuyetTrinh.docx
+reports/PDS301m_G3_Report.docx
