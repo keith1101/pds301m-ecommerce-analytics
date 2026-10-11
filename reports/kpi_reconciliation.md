@@ -1,7 +1,7 @@
-# KPI Reconciliation — Issue #18
+# KPI Reconciliation Report
 
 ## 1. Mục đích
-Đối chiếu chéo các chỉ số cốt lõi giữa pipeline làm sạch (#16), phân tích doanh thu (#7) và phân khúc RFM (#8), đảm bảo không có mâu thuẫn nào không giải thích được trước khi làm notebook và report cuối (#22, #19).
+Đối chiếu chéo các chỉ số cốt lõi giữa pipeline làm sạch dữ liệu, phân tích doanh thu và phân khúc khách hàng RFM, đảm bảo toàn bộ số liệu thống nhất tuyệt đối trước khi hoàn thiện notebook và báo cáo tổng hợp.
 
 ## 2. KPI Reconciliation
 

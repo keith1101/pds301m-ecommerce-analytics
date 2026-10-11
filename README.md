@@ -34,7 +34,7 @@ pds301m-ecommerce-analytics/
 │   ├── feature_engineering.py # RFM / customer feature engineering
 │   ├── eda.py                 # Revenue & Product EDA (có main() chạy độc lập)
 │   ├── reconcile.py           # KPI reconciliation (có main() chạy độc lập)
-│   ├── business_rules.py      # business rules phục vụ #21
+│   ├── business_rules.py      # business rules độc lập
 │   └── scraper.py             # web scraping bổ sung (books.toscrape.com)
 │
 ├── tests/
@@ -45,9 +45,9 @@ pds301m-ecommerce-analytics/
 │
 ├── notebooks/                 # exploration & deliverables; logic tái dùng
 │   │                          # nằm ở src/, notebook chỉ import
-│   ├── 04_customer_segmentation.ipynb   # RFM segmentation (#8)
-│   ├── 05_python_oop_demo.ipynb        # Python/OOP demo (#21)
-│   └── 06_final_integrated_analysis.ipynb  # final integration (#22)
+│   ├── 04_customer_segmentation.ipynb   # RFM segmentation
+│   ├── 05_python_oop_demo.ipynb        # Python/OOP demo
+│   └── 06_final_integrated_analysis.ipynb  # final integration
 │
 ├── charts/                    # PNG được track trong Git (xem quy ước đặt tên)
 │
@@ -105,7 +105,7 @@ Quy ước dữ liệu của team: chỉ dùng UCI dataset cho phân tích doanh
 ### Entry point chính
 
 `notebooks/06_final_integrated_analysis.ipynb` là luồng phân tích tích hợp
-end-to-end (#22), import logic từ `src/` thay vì copy code.
+end-to-end, import logic từ `src/` thay vì copy code.
 
 ```bash
 jupyter notebook
@@ -114,7 +114,7 @@ jupyter notebook
 Mở notebook 06 rồi **Restart Kernel → Run All**. Notebook tự tìm repo root
 bằng pathlib, chạy được từ thư mục repo root hoặc `notebooks/`.
 Input CSVs được đọc từ `data/processed/`; các assert trong notebook kiểm tra
-KPI khớp với số liệu đã reconcile ở #18.
+KPI khớp với số liệu đã reconcile theo baseline.
 
 ### Run pipeline modules
 
@@ -127,6 +127,7 @@ from src.data_processor import RetailDataProcessor
 p = RetailDataProcessor(Path("data/raw/online_retail.xlsx"))
 df = p.load_and_explore()
 p.clean_data(deduplicate=True, fill_guest=True)
+p.engineer_features()
 p.export_data(
     Path("data/processed/cleaned_retail.csv"),
     Path("data/processed/cancelled_retail.csv"),
@@ -198,8 +199,8 @@ giảm dần, tính tỷ lệ đóng góp và tỷ lệ tích lũy, rồi phân 
 
 - `develop`: integration branch. Mọi thay đổi qua pull request trước khi merge.
 - `main`: stable branch, hiện đang cũ (từ 24/09). Release `develop → main`
-  chỉ thực hiện sau khi P4 QA đạt (issue #20).
-- Feature/fix branch tạo từ `develop`, đặt tên theo issue.
+  chỉ thực hiện sau khi hoàn thành toàn bộ kiểm định P4 QA.
+- Feature/fix branch tạo từ `develop`.
 
 Không commit dataset lớn, file tạm, credential hoặc path máy cá nhân.
 

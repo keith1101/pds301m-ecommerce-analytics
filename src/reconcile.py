@@ -13,7 +13,10 @@ def load_inputs(base_path):
 
 def revenue_totals(df):
     """Tổng Revenue, non-Guest, Guest."""
-    from eda import total_revenue
+    try:
+        from src.eda import total_revenue
+    except ImportError:
+        from eda import total_revenue
     return (total_revenue(df),
             df[df['CustomerID'] != 'Guest']['Revenue'].sum(),
             df[df['CustomerID'] == 'Guest']['Revenue'].sum())

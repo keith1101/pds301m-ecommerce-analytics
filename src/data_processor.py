@@ -228,7 +228,10 @@ class RetailDataProcessor:
 
     def analyze_revenue(self):
         """Phân tích doanh thu"""
-        from eda import total_revenue, revenue_by_month, revenue_by_country, top_products
+        try:
+            from src.eda import total_revenue, revenue_by_month, revenue_by_country, top_products
+        except ImportError:
+            from eda import total_revenue, revenue_by_month, revenue_by_country, top_products
         return {
             'total': total_revenue(self.df_valid),
             'by_month': revenue_by_month(self.df_valid),

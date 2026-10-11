@@ -1,4 +1,4 @@
-"""Reusable RFM utilities for the Issue #5 baseline and Issue #15 follow-up."""
+"""Reusable RFM utilities for customer segmentation."""
 from __future__ import annotations
 
 from typing import Any

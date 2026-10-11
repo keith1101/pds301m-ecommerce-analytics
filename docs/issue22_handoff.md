@@ -6,6 +6,6 @@ To reproduce: `python -m pip install -r requirements.txt`; `jupyter notebook`; r
 
 Verification performed: notebook Run All completed without errors; all available KPI #18 equality checks passed; saved RFM verified against recomputation; scraping evidence: 1,000 titles validated; four generated figures; `pytest`: 41 passed.
 
-**Review limitation:** `data/processed/cancelled_retail.csv` was not supplied. Cancelled invoice count (9,251) is stated in Issue #18 but cannot be independently reverified from the supplied data. To meet the optional reconciliation audit too, add this artifact or regenerate it through `RetailDataProcessor` using raw Excel.
+**Review limitation:** `data/processed/cancelled_retail.csv` was not supplied. Cancelled row count (9,251 rows across 3,836 distinct invoices) is stated in the KPI reconciliation report but cannot be independently reverified from the supplied data. To meet the optional reconciliation audit too, add this artifact or regenerate it through `RetailDataProcessor` using raw Excel.
 
 Other caveats: Books to Scrape 50-page traversal is evidenced by `src/scraper.py` and 1,000-row saved CSV, not a live scrape. `src/eda.py` and `src/reconcile.py` standalone main entrypoints still contain Windows-only string path concatenation; final notebook bypasses these entrypoints and calls their reusable analysis functions with `pathlib` paths. No claims of merging a PR or Huy's review are made.

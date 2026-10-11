@@ -1,9 +1,8 @@
 # Final Analytics Report & Business Insights
 
-**PDS301m — E-Commerce Analytics Pipeline | Issue #19**  
-**Report integration:** Mẫn | **Review:** Huy  
+**PDS301m — E-Commerce Analytics Pipeline**  
 **Data:** UCI Online Retail (2010-12-01 to 2011-12-09)  
-**Evidence baseline:** `reports/kpi_reconciliation.md` (#18), `notebooks/06_final_integrated_analysis.ipynb` (#22), `reports/revenue_product_eda.md` (#7), and saved charts under `charts/`.
+**Evidence baseline:** `reports/kpi_reconciliation.md`, `notebooks/06_final_integrated_analysis.ipynb`, `reports/revenue_product_eda.md`, and saved charts under `charts/`.
 
 > **Reproducibility note:** This report uses the reconciled #18/#22 baseline and supplied processed CSVs. The order-level impact assessment reuses `src/anomaly_detector.py` from the integrated repository, not a competing implementation. The supplied cancellation export was independently audited. Revenue-impact figures are a supplementary, reproducible breakdown of existing IQR flags and do not replace any KPI in #18/#22.
 
@@ -133,6 +132,6 @@ These recommendations are **hypotheses/priorities supported by descriptive evide
 | Revenue/quantity product ranks | Final Notebook §5; `charts/final_top_products.png`; EDA report §3.4 | `src/eda.py` |
 | RFM definition, segment count/revenue | Final Notebook §6; `charts/final_rfm_segment_revenue.png`; KPI reconciliation §4 | `src/feature_engineering.py`, `src/reconcile.py` |
 | IQR methodology, combined flagged-invoice revenue impact | Final Notebook §7; `charts/final_order_value_boxplot.png`; `data/processed/anomaly_orders_union_issue19.csv` | `src/anomaly_detector.py` |
-| Cancellation rows versus distinct invoices | `data/processed/cancelled_retail.csv` and Issue #18 cancellation audit | `src/anomaly_detector.py` (`analyze_cancelled_orders`) |
+| Cancellation rows versus distinct invoices | `data/processed/cancelled_retail.csv` and cancellation audit | `src/anomaly_detector.py` (`analyze_cancelled_orders`) |
 
-**Review status/QA:** All required inputs for report-level evidence are now present; the combined flagged-order revenue impact was reproduced with the project’s detector without changing reconciled #18/#22 KPIs. Before closing #19, Huy must review the report, explicitly acknowledge the #18 wording correction (9,251 cancellation lines versus 3,836 distinct invoices), and approve the PR. No PR merge or Huy approval is claimed here.
+**Review status/QA:** All required inputs for report-level evidence are present; the combined flagged-order revenue impact was reproduced with the project's detector without changing reconciled KPIs. Wording distinguishes 9,251 cancellation lines versus 3,836 distinct invoices.

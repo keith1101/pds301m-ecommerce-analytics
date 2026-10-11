@@ -1,11 +1,11 @@
-# Revenue & Product EDA — Issue #7
+# Revenue & Product EDA
 
 ## 1. Câu hỏi phân tích
 Nhóm khách hàng/sản phẩm nào tạo doanh thu cao? Xu hướng doanh thu theo thời gian ra sao?
 (Câu hỏi P4: Phân tích khách hàng và sản phẩm trong bán lẻ online)
 
 ## 2. Dữ liệu
-- Nguồn: `data/processed/cleaned_retail.csv`, sinh bởi pipeline sau PR #26 (issue #16)
+- Nguồn: `data/processed/cleaned_retail.csv`, sinh bởi cleaning pipeline
 - Phạm vi: 524,878 giao dịch bán hợp lệ, 12/2010–12/2011, cửa hàng quà tặng online tại Anh
 - Population: đã loại hóa đơn hủy (InvoiceNo bắt đầu bằng C), Quantity và UnitPrice > 0,
   đã khử trùng lặp; giữ dòng Guest (khách vãng lai)
@@ -75,7 +75,7 @@ tập sản phẩm khác nhau.
 ### 3.5 Phân bố giá trị đơn hàng
 Boxplot cho thấy đơn hàng điển hình chỉ vài trăm bảng; ngưỡng trên (IQR) £1,006.11;
 đuôi outliers kéo tới £168K là các đơn sỉ (wholesale), không phải lỗi dữ liệu.
-Kết quả này làm đầu vào cho phân tích anomaly (issue #16).
+Kết quả này làm đầu vào cho phân tích anomaly.
 
 ## 4. Phương pháp
 - Code: `src/eda.py`

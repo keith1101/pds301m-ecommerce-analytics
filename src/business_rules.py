@@ -1,5 +1,8 @@
 import pandas as pd
-from feature_engineering import assign_rfm_segment
+try:
+    from src.feature_engineering import assign_rfm_segment
+except ImportError:
+    from feature_engineering import assign_rfm_segment
 
 def calculate_revenue(quantity, unit_price):
     """Tính doanh thu một dòng: Quantity * UnitPrice."""

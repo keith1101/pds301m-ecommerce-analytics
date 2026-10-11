@@ -1,4 +1,4 @@
-"""Production-level integration checks for Issue #8 customer RFM segmentation."""
+"""Production-level integration checks for customer RFM segmentation."""
 from pathlib import Path
 
 import numpy as np
