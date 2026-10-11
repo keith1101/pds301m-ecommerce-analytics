@@ -1,18 +1,18 @@
 # PDS301m — E-commerce Analytics
 
-Dự án phân tích dữ liệu thương mại điện tử cho môn PDS301m (team G3), sử dụng bộ dữ liệu UCI Online Retail.
+E-commerce data analytics pipeline and customer segmentation project for course PDS301m (Team G3), built upon the UCI Online Retail dataset.
 
-Project hiện bao gồm data-cleaning pipeline, feature engineering, anomaly detection, RFM analysis, automated tests, notebooks và analysis artifacts.
+The repository provides an end-to-end data processing pipeline, feature engineering, upper-tail IQR anomaly detection, tie-safe RFM customer segmentation, web scraping, automated test suites, analytical notebooks, and comprehensive technical reports.
 
-## Mục tiêu
+## Objectives
 
-- Làm sạch và kiểm tra chất lượng dữ liệu giao dịch.
-- Chuẩn hóa các trường dữ liệu quan trọng.
-- Tạo Revenue và các đặc trưng phục vụ phân tích.
-- Phân tích doanh thu và hành vi mua hàng.
-- Phân khúc khách hàng bằng RFM.
-- Phát hiện order anomaly theo Revenue và Quantity.
-- Tạo output và biểu đồ có khả năng tái lập.
+- Clean, validate, and audit transactional data quality.
+- Standardize core schema fields, data types, and missing value representations.
+- Engineer line-item revenue and temporal features for analytics.
+- Uncover multidimensional sales trends across time, geography, and product lines.
+- Segment customer purchase behavior using the RFM model.
+- Detect high-value wholesale order anomalies via upper-tail Interquartile Range (IQR).
+- Ensure reproducible analytical artifacts, visualizations, and summary reports.
 
 ## Project Structure
 
@@ -22,62 +22,64 @@ pds301m-ecommerce-analytics/
 ├── requirements.txt
 ├── pytest.ini
 │
-├── data/                      # KHÔNG commit lên Git (xem docs/DATASET_STORAGE.md)
-│   ├── raw/                   # đặt online_retail.xlsx tại đây
-│   └── processed/             # cleaned_retail.csv, cancelled_retail.csv, ...
+├── data/                      # Excluded from Git tracking (see docs/DATASET_STORAGE.md)
+│   ├── raw/                   # Place online_retail.xlsx here
+│   └── processed/             # cleaned_retail.csv, cancelled_retail.csv, etc.
 │
 ├── src/
 │   ├── data_processor.py      # RetailDataProcessor: validation, cleaning,
-│   │                          # cancelled-invoice separation, feature engineering
+│   │                          # cancellation separation, feature engineering
 │   ├── anomaly_detector.py    # OrderAnomalyDetector: IQR Revenue/Quantity
-│   │                          # anomaly, business impact, chart generation
-│   ├── feature_engineering.py # RFM / customer feature engineering
-│   ├── eda.py                 # Revenue & Product EDA (có main() chạy độc lập)
-│   ├── reconcile.py           # KPI reconciliation (có main() chạy độc lập)
-│   ├── business_rules.py      # business rules độc lập
-│   └── scraper.py             # web scraping bổ sung (books.toscrape.com)
+│   │                          # anomaly detection, business impact, plotting
+│   ├── feature_engineering.py # RFM segmentation & customer feature engineering
+│   ├── eda.py                 # Revenue & Product EDA (standalone CLI main)
+│   ├── reconcile.py           # KPI reconciliation & validation (standalone CLI main)
+│   ├── business_rules.py      # Standalone business rule functions
+│   └── scraper.py             # Books to Scrape web scraper (title/price/rating)
 │
 ├── tests/
 │   ├── test_data_processor.py
 │   ├── test_anomaly_detector.py
+│   ├── test_business_rules.py
 │   ├── test_rfm.py
 │   └── test_rfm_integration.py
 │
-├── notebooks/                 # exploration & deliverables; logic tái dùng
-│   │                          # nằm ở src/, notebook chỉ import
-│   ├── 04_customer_segmentation.ipynb   # RFM segmentation
-│   ├── 05_python_oop_demo.ipynb        # Python/OOP demo
-│   └── 06_final_integrated_analysis.ipynb  # final integration
+├── notebooks/                 # Exploratory analyses & final deliverables
+│   ├── 04_customer_segmentation.ipynb   # RFM segmentation workflow
+│   ├── 05_python_oop_demo.ipynb        # Python OOP & core data structure demo
+│   └── 06_final_integrated_analysis.ipynb  # End-to-end integrated analysis
 │
-├── charts/                    # PNG được track trong Git (xem quy ước đặt tên)
+├── charts/                    # High-resolution PNG figures tracked in Git
 │
 ├── docs/
-│   ├── DATASET_STORAGE.md     # dataset contract & reproducibility
-│   ├── rfm_methodology.md     # phương pháp RFM
+│   ├── DATASET_STORAGE.md     # Data contract & reproducibility specifications
+│   ├── p4_traceability.md     # 16-requirement traceability audit matrix
+│   ├── rfm_methodology.md     # RFM mathematical methodology & scoring
 │   ├── rfm_followup_issue15.md
-│   ├── issue22_handoff.md     # handoff notebook 06
+│   ├── issue22_handoff.md     # Notebook 06 integration handoff notes
 │   └── iqr.svg
 │
 └── reports/
-    ├── revenue_product_eda.md
-    ├── kpi_reconciliation.md
-    ├── final_analytics_report.md
-    └── final_evidence_notes.md
+    ├── PDS301m_G3_BaoCaoTongKet.docx  # Final academic project report (DOCX)
+    ├── revenue_product_eda.md         # Revenue & Product EDA report
+    ├── kpi_reconciliation.md          # Multi-pipeline KPI reconciliation report
+    ├── final_analytics_report.md      # Final integrated analytics report
+    └── final_evidence_notes.md        # Traceability & evidence notes
 ```
 
-## File nào được Git track, file nào phải tự chuẩn bị
+## Tracked Files vs. Local Datasets
 
-| Nhóm | Git track | Lấy / tái tạo ở local |
+| Category | Tracked in Git | Local Acquisition / Reproduction |
 |---|---|---|
-| Source, tests, notebooks, charts, reports, docs | Có | |
-| `data/raw/online_retail.xlsx` | Không | Tải từ UCI (link bên dưới), đặt đúng path |
-| `data/processed/*.csv` | Không | Chạy pipeline / đặt file CSV của team vào đúng path |
+| Source code, tests, notebooks, charts, reports, docs | Yes | Included in repository clone |
+| `data/raw/online_retail.xlsx` | No | Download from UCI Machine Learning Repository (link below) |
+| `data/processed/*.csv` | No | Generated via pipeline or reproduced using notebooks |
 
-`.gitignore` chỉ loại trừ `data/raw/*` và `data/processed/*` (ngoại trừ `.gitkeep`). Charts và reports **được track** để phục vụ review.
+`.gitignore` excludes `data/raw/*` and `data/processed/*` (preserving `.gitkeep`). Charts and report artifacts are **tracked in Git** for academic grading and peer verification.
 
 ## Setup
 
-Yêu cầu Python 3.9+.
+Requires Python 3.9+.
 
 ```bash
 python -m pip install -r requirements.txt
@@ -85,127 +87,116 @@ python -m pip install -r requirements.txt
 
 ## Data Preparation
 
-1. Tải UCI Online Retail dataset: https://archive.ics.uci.edu/dataset/352/online+retail
-2. Đặt file tại `data/raw/online_retail.xlsx` (đúng tên file, chữ thường).
-3. Chạy cleaning pipeline để tạo `data/processed/cleaned_retail.csv`,
-   `data/processed/cancelled_retail.csv` (xem mục Run Pipeline).
-4. File `data/processed/customer_segments.csv` được tạo bởi notebook 04.
+1. Download the UCI Online Retail dataset: https://archive.ics.uci.edu/dataset/352/online+retail
+2. Place the file at `data/raw/online_retail.xlsx` (lowercase filename).
+3. Execute the data cleaning pipeline to generate `data/processed/cleaned_retail.csv` and `data/processed/cancelled_retail.csv` (see [Run Pipeline Modules](#run-pipeline-modules)).
+4. Customer segments (`data/processed/customer_segments.csv`) are produced by notebook `04_customer_segmentation.ipynb` or via `src/feature_engineering.py`.
 
-Chi tiết data contract (schema, quy tắc Quantity/UnitPrice, chính sách duplicate,
-công thức `Revenue = Quantity x UnitPrice`): `docs/DATASET_STORAGE.md`.
+For comprehensive data contract specifications (schema types, Quantity/UnitPrice filtering rules, deduplication policies, and the `Revenue = Quantity * UnitPrice` convention), refer to `docs/DATASET_STORAGE.md`.
 
-Lưu ý: dữ liệu `raw/` là bản gốc, không chỉnh sửa/ghi đè/xóa bản ghi bằng tay.
-Dữ liệu `processed/` phải tái tạo được từ pipeline trong `src/` hoặc notebooks,
-không sửa output bằng tay.
+*Note:* Raw data in `data/raw/` is treated as immutable ground truth. All processed data in `data/processed/` must be deterministically reproducible from code without manual edits.
 
-Quy ước dữ liệu của team: chỉ dùng UCI dataset cho phân tích doanh thu/khách hàng.
+## Execution
 
-## Run
+### Primary Entry Point
 
-### Entry point chính
-
-`notebooks/06_final_integrated_analysis.ipynb` là luồng phân tích tích hợp
-end-to-end, import logic từ `src/` thay vì copy code.
+`notebooks/06_final_integrated_analysis.ipynb` serves as the end-to-end integration workflow, consuming modular components from `src/`:
 
 ```bash
 jupyter notebook
 ```
 
-Mở notebook 06 rồi **Restart Kernel → Run All**. Notebook tự tìm repo root
-bằng pathlib, chạy được từ thư mục repo root hoặc `notebooks/`.
-Input CSVs được đọc từ `data/processed/`; các assert trong notebook kiểm tra
-KPI khớp với số liệu đã reconcile theo baseline.
+Open notebook 06 and run **Restart Kernel → Run All**. The notebook resolves repository root paths dynamically via `pathlib`, executing seamlessly from either the project root or the `notebooks/` subfolder. Built-in assertions verify that all intermediate KPIs reconcile exactly with established baselines.
 
-### Run pipeline modules
+### Run Pipeline Modules
 
-Cleaning pipeline chạy qua class `RetailDataProcessor`:
+Execute data cleaning via the `RetailDataProcessor` class:
 
 ```python
 from pathlib import Path
 from src.data_processor import RetailDataProcessor
 
-p = RetailDataProcessor(Path("data/raw/online_retail.xlsx"))
-df = p.load_and_explore()
-p.clean_data(deduplicate=True, fill_guest=True)
-p.engineer_features()
-p.export_data(
+processor = RetailDataProcessor(Path("data/raw/online_retail.xlsx"))
+df = processor.load_and_explore()
+processor.clean_data(deduplicate=True, fill_guest=True)
+processor.engineer_features()
+processor.export_data(
     Path("data/processed/cleaned_retail.csv"),
     Path("data/processed/cancelled_retail.csv"),
 )
 ```
 
-Các module phân tích chạy độc lập từ repo root (cần `data/processed/*.csv` đã có):
+Run standalone analysis modules from the repository root (requires generated `data/processed/*.csv` files):
 
 ```bash
 python src/eda.py
 python src/reconcile.py
 ```
 
-`src/scraper.py` chạy scraping bổ sung (Books to Scrape: title/price/rating).
+Run the supplementary web scraper (`books.toscrape.com`):
 
-## Run Tests
+```bash
+python src/scraper.py
+```
 
-Từ repository root:
+## Running Automated Tests
+
+Run the test suite from the repository root:
 
 ```bash
 python -m pytest -q
 ```
 
-Tests hiện tại kiểm tra: data cleaning, duplicate handling, missing `InvoiceNo`,
-invalid `InvoiceDate`, non-numeric `Quantity`/`UnitPrice`, cancelled invoices,
-Revenue calculation, Revenue anomaly, Quantity anomaly, combined `IsAnomaly`,
-empty DataFrame, zero-IQR edge case, anomaly CSV output, business impact
-(Revenue/Quantity/Combined) và RFM logic.
+The test suite covers:
+- Core data validation, deduplication audits, and missing identifier handling.
+- Timestamp parsing and non-positive `Quantity`/`UnitPrice` filtering.
+- Cancellation prefix separation (`C`-prefixed invoices).
+- Line-item `Revenue` calculation and aggregation.
+- Upper-tail IQR anomaly detection (Revenue, Quantity, and combined flags).
+- Empty dataset and zero-IQR boundary conditions.
+- Business impact quantification across normal vs. anomaly orders.
+- Tie-safe percentile RFM scoring and 6-segment precedence hierarchies.
+- Production dataset KPI reconciliation.
 
-`tests/test_rfm_integration.py` cần file `data/processed/cleaned_retail.csv`
-ở local; test này tự skip khi file chưa có.
+## Visualizations
 
-## Charts
+All figures generated by pipelines and notebooks are stored in `charts/` and tracked in version control:
 
-Charts do notebook/source sinh ra, được track trong Git để review.
+- `final_*.png`: Production visualizations generated by `notebooks/06_final_integrated_analysis.ipynb` and referenced in final reports.
+- Exploratory charts: Phase-specific outputs (EDA, RFM distribution, order anomaly boxplots) retained as auditable artifacts.
 
-Quy ước đặt tên:
+## Reports & Documentation
 
-- `final_*.png`: chart do `notebooks/06_final_integrated_analysis.ipynb` (#22)
-  sinh ra, dùng trong `reports/final_analytics_report.md` (#19).
-- Các chart còn lại: output của từng phase phân tích (EDA #7, RFM #8,
-  anomaly #6), được cite trong report tương ứng. Giữ lại làm evidence từng phase.
+- `reports/PDS301m_G3_BaoCaoTongKet.docx`: Academic project summary report with formal formatting, embedded charts, and comprehensive KPI reconciliations.
+- `reports/revenue_product_eda.md`: In-depth analysis of temporal patterns, top products, and geographical distribution.
+- `reports/kpi_reconciliation.md`: Multi-pipeline KPI reconciliation and cross-module consistency validation.
+- `reports/final_analytics_report.md`: Technical analytics report with claim-to-evidence traceability.
+- `docs/p4_traceability.md`: Complete audit matrix mapping all 16 project requirements to verified code locations.
 
-## Reports
+## Methodology
 
-- `reports/revenue_product_eda.md`: phân tích Revenue & Product (#7).
-- `reports/kpi_reconciliation.md`: đối chiếu KPI giữa các pipeline (#18).
-- `reports/final_analytics_report.md`: báo cáo phân tích cuối cùng (#19),
-  kèm bảng traceability claim → evidence.
-- `reports/final_evidence_notes.md`: ghi chú evidence bổ sung (#19).
+### RFM (Recency, Frequency, Monetary)
+Customer behavioral segmentation based on three pillars:
+- **Recency ($R$):** Days elapsed from customer's latest purchase to reference baseline date (2011-12-10).
+- **Frequency ($F$):** Number of distinct valid sales transactions.
+- **Monetary ($M$):** Cumulative spending across valid sales transactions.
+Scores are assigned from 1 to 5 using tie-safe percentile rank binning and mapped to 6 business segments (*Champions*, *Loyal Customers*, *At Risk*, *Potential Loyalists*, *Hibernating*, *Others*).
 
-Mỗi report nêu rõ câu hỏi nghiên cứu, nguồn và phạm vi dữ liệu, phương pháp,
-kết quả, giới hạn và đường dẫn đến biểu đồ minh họa.
+### IQR Anomaly Detection
+Outlier identification across aggregated invoices using the upper-tail Interquartile Range:
+$$\text{Upper Bound} = Q_3 + 1.5 \times \text{IQR}$$
+Orders exceeding threshold limits in Revenue (£1,006.11) or Quantity (636.5 units) are flagged for business review as legitimate B2B wholesale orders rather than discarded.
 
-## Phương pháp
-
-**RFM (Recency, Frequency, Monetary):** phân khúc khách hàng theo hành vi mua sắm.
-Recency = ngày phân tích trừ ngày mua gần nhất; Frequency = số đơn hợp lệ trong kỳ;
-Monetary = tổng giá trị mua trong kỳ.
-
-**IQR (Interquartile Range):** phát hiện outlier. `IQR = Q3 - Q1`; outlier là giá trị
-ngoài khoảng `[Q1 - 1.5*IQR, Q3 + 1.5*IQR]`. Order bị flag anomaly chỉ được đánh dấu
-để review, không tự động xóa.
-
-**ABC:** phân loại sản phẩm theo doanh thu. Tính tổng revenue từng sản phẩm, sắp xếp
-giảm dần, tính tỷ lệ đóng góp và tỷ lệ tích lũy, rồi phân loại A/B/C theo ngưỡng.
+### ABC & Product Concentration
+Classification of catalog items by revenue contribution. Products are sorted descending by cumulative revenue share to distinguish high-impact SKUs from volume-driven items (after filtering out freight and service charges such as `DOT`, `POST`, `AMAZONFEE`).
 
 ## Branch Workflow
 
-- `develop`: integration branch. Mọi thay đổi qua pull request trước khi merge.
-- `main`: stable branch, hiện đang cũ (từ 24/09). Release `develop → main`
-  chỉ thực hiện sau khi hoàn thành toàn bộ kiểm định P4 QA.
-- Feature/fix branch tạo từ `develop`.
+- `develop`: Integration branch. All features and bugfixes are integrated and verified here.
+- `main`: Production release branch. Releases from `develop → main` are merged following full QA audit and test verification.
+- Feature branches follow standard Git naming conventions (`feature/<name>-<topic>`).
 
-Không commit dataset lớn, file tạm, credential hoặc path máy cá nhân.
+## Dataset Reference
 
-## Dataset
-
-UCI Online Retail:
-
+UCI Machine Learning Repository — Online Retail Dataset:
 https://archive.ics.uci.edu/dataset/352/online+retail

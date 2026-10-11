@@ -16,7 +16,7 @@ class RetailDataProcessor:
 
     def clean_data(self, deduplicate: bool = True, fill_guest: bool = True):
         if self.df is None or self.df.empty:
-            raise ValueError("Dataframe rỗng hoặc chưa được tải.")
+            raise ValueError("DataFrame is empty or not loaded.")
 
         df_work = self.df.copy()
         initial_rows = len(df_work)
@@ -162,52 +162,52 @@ class RetailDataProcessor:
             'missing_customer_id_valid': missing_cust_count
         }
 
-        print("\n=== BÁO CÁO AUDIT LÀM SẠCH DỮ LIỆU ===")
+        print("\n=== DATA CLEANING AUDIT REPORT ===")
 
         print(
-            f"1. Số dòng ban đầu:                 "
+            f"1. Initial row count:                 "
             f"{initial_rows:,}"
         )
 
         print(
-            f"2. Số dòng trùng lặp (Duplicate):   "
+            f"2. Duplicate rows:                    "
             f"{dup_rows:,} "
-            f"(Chênh lệch Qty: "
+            f"(Variance Qty: "
             f"{self.audit_stats['qty_diff_dedup']:,.0f}, "
             f"Rev: £{self.audit_stats['rev_diff_dedup']:,.2f})"
         )
 
         print(
-            f"3. Số dòng sau khi xử lý Duplicate: "
+            f"3. Rows after deduplication:          "
             f"{after_dedup_rows:,}"
         )
 
         print(
-            f"4. Lỗi thiếu/không hợp lệ trường cốt lõi: "
+            f"4. Missing/invalid core field rows:   "
             f"{invalid_core_rows:,}"
         )
 
         print(
-            f"5. Số dòng hóa đơn hủy (Prefix C):  "
+            f"5. Cancelled invoice rows (Prefix C): "
             f"{cancelled_rows:,}"
         )
 
         print(
-            f"6. Lỗi Quantity/UnitPrice <= 0:     "
+            f"6. Quantity/UnitPrice <= 0 invalid:   "
             f"{invalid_qty_price_rows:,}"
         )
 
         print(
-            f"7. Giao dịch bán hợp lệ giữ lại:    "
+            f"7. Valid sales transactions retained: "
             f"{len(self.df_valid):,} "
-            f"(Trong đó thiếu CustomerID: "
+            f"(Including missing CustomerID / Guest: "
             f"{missing_cust_count:,})"
         )
 
     def engineer_features(self):
         if self.df_valid is None:
             raise ValueError(
-                "Cần chạy clean_data() trước khi tạo đặc trưng."
+                "clean_data() must be executed before feature engineering."
             )
 
         self.df_valid['Revenue'] = (
@@ -222,12 +222,12 @@ class RetailDataProcessor:
         )
 
         print(
-            f"-> Tổng Revenue hợp lệ sau làm sạch: "
+            f"-> Total valid sales revenue after cleaning: "
             f"£{self.df_valid['Revenue'].sum():,.2f}"
         )
 
     def analyze_revenue(self):
-        """Phân tích doanh thu"""
+        """Analyze revenue metrics."""
         try:
             from src.eda import total_revenue, revenue_by_month, revenue_by_country, top_products
         except ImportError:

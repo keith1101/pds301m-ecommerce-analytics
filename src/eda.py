@@ -3,13 +3,13 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Mã dịch vụ/phí: không phải hàng hóa, loại khỏi bảng xếp hạng sản phẩm
-# nhưng vẫn giữ trong tổng doanh thu.
+# Service/fee codes: non-merchandise charges excluded from product rankings
+# but retained in total revenue calculations.
 SERVICE_CODES = ['DOT', 'POST', 'M', 'm', 'AMAZONFEE', 'B']
 
 
 def load_cleaned_data(base_path):
-    """Đọc cleaned_retail.csv thành DataFrame."""
+    """Load cleaned_retail.csv into a DataFrame."""
     data_path = Path(base_path) / 'data' / 'processed' / 'cleaned_retail.csv'
     return pd.read_csv(
         data_path,
@@ -18,33 +18,33 @@ def load_cleaned_data(base_path):
 
 
 def total_revenue(df):
-    """Tính tổng doanh thu toàn dataset."""
+    """Calculate total dataset revenue."""
     return df['Revenue'].sum()
 
 
 def revenue_by_month(df):
-    """Tính doanh thu theo từng tháng (YearMonth)."""
+    """Calculate revenue by month (YearMonth)."""
     return df.groupby('YearMonth')['Revenue'].sum()
 
 
 def revenue_by_country(df):
-    """Tính doanh thu theo quốc gia, xếp giảm dần."""
+    """Calculate revenue by country, sorted descending."""
     return df.groupby('Country')['Revenue'].sum().sort_values(ascending=False)
 
 
 def top_products(df, metric='Revenue', n=10):
-    """Top n sản phẩm theo metric ('Revenue' hoặc 'Quantity'), đã loại mã dịch vụ."""
+    """Top n products by metric ('Revenue' or 'Quantity'), excluding service codes."""
     products = df[~df['StockCode'].isin(SERVICE_CODES)]
     return products.groupby('StockCode')[metric].sum().sort_values(ascending=False).head(n)
 
 
 def order_values(df):
-    """Giá trị từng hóa đơn, dùng vẽ boxplot."""
+    """Compute per-invoice order values for boxplot distribution."""
     return df.groupby('InvoiceNo')['Revenue'].sum()
 
 
 def save_chart(series, filepath, kind='bar', xlabel=''):
-    """Vẽ chart từ một Series và lưu thành file."""
+    """Render chart from a Series and save to file."""
     plt.figure()
     series.plot(kind=kind)
     plt.xlabel(xlabel)

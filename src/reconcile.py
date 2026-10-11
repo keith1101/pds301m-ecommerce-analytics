@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def load_inputs(base_path):
-    """Đọc cleaned_retail.csv, customer_segments.csv, cancelled_retail.csv."""
+    """Load cleaned_retail.csv, customer_segments.csv, and cancelled_retail.csv."""
     proc = Path(base_path) / 'data' / 'processed' 
     cr1 = pd.read_csv(proc / 'cleaned_retail.csv', dtype={"InvoiceNo": str})
     cs = pd.read_csv(proc / 'customer_segments.csv', dtype={"CustomerID": str})
@@ -12,7 +12,7 @@ def load_inputs(base_path):
 
 
 def revenue_totals(df):
-    """Tổng Revenue, non-Guest, Guest."""
+    """Calculate total, non-Guest, and Guest revenue."""
     try:
         from src.eda import total_revenue
     except ImportError:
@@ -23,19 +23,19 @@ def revenue_totals(df):
 
 
 def rfm_monetary_total(seg):
-    """Tổng Monetary từ customer_segments.csv."""
+    """Calculate total Monetary sum from customer_segments.csv."""
     return seg['Monetary'].sum()
 
 
 def data_quality_counts(df, cancelled):
-    """Đếm duplicate, invalid, cancelled để đối chiếu audit."""
+    """Count duplicate, invalid, and cancelled rows for audit reconciliation."""
     return (df.duplicated().sum(),
             df[(df['Quantity'] <= 0) | (df['UnitPrice'] <= 0)].shape[0],
             cancelled.shape[0])
 
 
 def revenue_by_segment(df, seg, output_path):
-    """Join Segment vào transaction, tính Revenue theo segment, lưu CSV."""
+    """Join customer segment to transactions, compute revenue by segment, and save to CSV."""
     merged = df.merge(seg[['CustomerID', 'Segment']], on='CustomerID', how='left')
     merged.groupby('Segment')['Revenue'].sum().to_csv(output_path)
     return merged

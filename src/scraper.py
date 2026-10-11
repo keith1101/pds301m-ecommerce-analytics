@@ -84,18 +84,16 @@ def scrape_books(start_url, rating_map, max_pages=None):
 
         while current_url is not None:
 
-            # 1. Tải HTML của trang hiện tại
+            # 1. Fetch HTML of current page
             page_soup = fetch_page(session, current_url)
 
-            # 2. Tìm tất cả sách
+            # 2. Find all book containers
             book_tags = page_soup.find_all(
                 "article",
                 class_="product_pod"
             )
 
-            # Duyệt book_tags, gọi parse_book()
-            # và lưu kết quả vào books_data
-
+            # Iterate over book_tags, parse each book, and append to books_data
             for book_tag in book_tags:
                 books_data.append(parse_book(book_tag, rating_map))
 
@@ -106,21 +104,20 @@ def scrape_books(start_url, rating_map, max_pages=None):
                 f"{len(book_tags)} books"
             )
 
-            # 3. Kiểm tra giới hạn số trang
+            # 3. Check page limit
             if (
                 max_pages is not None
                 and page_number >= max_pages
             ):
                 break
 
-            # Tìm nút Next.
-            # Nếu không còn Next, thoát vòng lặp.
+            # Find Next button. If no Next button, exit loop.
             next_button = page_soup.select_one("li.next a")
             if next_button is None:
                 break
-            # Cập nhật current_url bằng urljoin()
+            # Update current_url using urljoin()
             current_url = urljoin(current_url, next_button.get("href"))
-            # Nghỉ 1 giây trước request tiếp theo
+            # Polite 1-second delay before next request
             time.sleep(1)
 
     return books_data
