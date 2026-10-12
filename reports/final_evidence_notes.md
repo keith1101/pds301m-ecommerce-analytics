@@ -8,6 +8,5 @@
 - Combined flagged Revenue: £5,345,163.731 (50.2265371% of total).
 - Revenue-only flags' Revenue: £5,089,007.771.
 - Quantity-only flagged invoices: 374; Revenue: £256,155.96.
-- Cancellation input independently checked: 9,251 rows, 3,836 unique cancellation invoices, 275,560 absolute returned units. Earlier notes called 9,251 "invoices"; that number is rows.
+- Cancellation input independently checked: 9,251 rows, 3,836 unique cancellation invoices, 275,560 absolute returned units. Note: 9,251 is a row count, not a distinct-invoice count.
 - Reproduce with: `python -c "from src.anomaly_detector import OrderAnomalyDetector; d=OrderAnomalyDetector(cleaned_data_path='data/processed/cleaned_retail.csv',cancelled_data_path='data/processed/cancelled_retail.csv'); a=d.detect_iqr_anomalies(); print(a.loc[a.IsAnomaly,'Revenue'].sum(), a.loc[a.IsAnomaly,'Revenue'].sum()/a.Revenue.sum())"` from repository root.
-- Final review and PR merge complete external sign-off steps.
