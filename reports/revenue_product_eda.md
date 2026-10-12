@@ -1,91 +1,86 @@
 # Revenue & Product EDA
 
-## 1. Câu hỏi phân tích
-Nhóm khách hàng/sản phẩm nào tạo doanh thu cao? Xu hướng doanh thu theo thời gian ra sao?
-(Câu hỏi P4: Phân tích khách hàng và sản phẩm trong bán lẻ online)
+## 1. Analysis questions
+Which customer/product groups generate the most revenue? How does revenue trend over time?
+(P4 topic: customer and product analysis in online retail)
 
-## 2. Dữ liệu
-- Nguồn: `data/processed/cleaned_retail.csv`, sinh bởi cleaning pipeline
-- Phạm vi: 524,878 giao dịch bán hợp lệ, 12/2010–12/2011, cửa hàng quà tặng online tại Anh
-- Population: đã loại hóa đơn hủy (InvoiceNo bắt đầu bằng C), Quantity và UnitPrice > 0,
-  đã khử trùng lặp; giữ dòng Guest (khách vãng lai)
-- Định nghĩa: Revenue = Quantity × UnitPrice
+## 2. Data
+- Source: `data/processed/cleaned_retail.csv`, produced by the cleaning pipeline
+- Scope: 524,878 valid sales transactions, 12/2010–12/2011, UK-based online gift store
+- Population: cancelled invoices excluded (InvoiceNo starting with C), Quantity and UnitPrice > 0, deduplicated; Guest (anonymous) rows kept
+- Definition: Revenue = Quantity × UnitPrice
 
-## 3. Kết quả
+## 3. Results
 
-### 3.1 Tổng doanh thu
+### 3.1 Total revenue
 
-| Chỉ số | Giá trị |
+| Metric | Value |
 |---|---:|
 | Valid transaction rows | 524,878 |
 | Total Revenue | £10,642,110.80 |
 | Non-Guest Revenue | £8,887,208.89 |
 | Guest Revenue | £1,754,901.91 |
 
-Kiểm tra consistency:
+Consistency checks:
 
-- `Revenue = Quantity × UnitPrice` được tính lại độc lập và khớp với cột `Revenue`.
-- Non-Guest Revenue khớp với population dùng cho RFM.
-- Guest vẫn được giữ trong tổng Revenue nhưng không tham gia RFM.
-- Cancelled invoices được tách sang `cancelled_retail.csv` và không nằm trong sales revenue population.
+- `Revenue = Quantity × UnitPrice` recomputed independently and matches the `Revenue` column.
+- Non-Guest Revenue matches the population used for RFM.
+- Guest rows stay in total Revenue but are excluded from RFM.
+- Cancelled invoices are separated into `cancelled_retail.csv` and are not part of the sales revenue population.
 
-### 3.2 Xu hướng doanh thu theo tháng
+### 3.2 Monthly revenue trend
 
-Các điểm đáng chú ý:
+Notable points:
 
-- Revenue đạt đỉnh vào **11/2011**, khoảng **£1.5M**.
-- Revenue thấp hơn rõ rệt vào **02/2011** và **04/2011**, khoảng **£0.52M**.
-- Revenue tăng mạnh từ khoảng tháng 9 đến tháng 11/2011.
-- `12/2010` và `12/2011` là các tháng không đầy đủ dữ liệu nên không nên so sánh trực tiếp với các tháng đầy đủ.
+- Revenue peaks in **11/2011** at about **£1.5M**.
+- Revenue is clearly lower in **02/2011** and **04/2011**, about **£0.52M**.
+- Revenue rises strongly from around September to November 2011.
+- `12/2010` and `12/2011` are partial months, so they should not be compared directly with full months.
 
 Chart:
 
 `charts/revenue_monthly_line.png`
 
-### 3.3 Doanh thu theo quốc gia
-- United Kingdom: **84.6%** (~£9.0M). Business phụ thuộc gần như hoàn toàn vào thị trường nội địa Anh.
-- 9 nước tiếp theo (Netherlands, EIRE, Germany, France, Australia, Spain, Switzerland, Belgium, Sweden) cộng lại chỉ ~15%.
+### 3.3 Revenue by country
+- United Kingdom: **84.6%** (~£9.0M). The business depends almost entirely on the UK domestic market.
+- The next 9 countries (Netherlands, EIRE, Germany, France, Australia, Spain, Switzerland, Belgium, Sweden) combined account for only ~15%.
 
-### 3.4 Top sản phẩm
+### 3.4 Top products
 
-Các mã dịch vụ hoặc bút toán không đại diện cho sản phẩm vật lý được loại khỏi bảng xếp hạng sản phẩm, nhưng vẫn được giữ trong tổng doanh thu:
+Service codes and accounting entries that do not represent physical products are excluded from the product ranking but kept in total revenue:
 
-| StockCode | Description / Meaning | Xử lý |
+| StockCode | Description / Meaning | Treatment |
 |---|---|---|
-| DOT | DOTCOM POSTAGE | Loại khỏi product ranking |
-| POST | POSTAGE | Loại khỏi product ranking |
-| M | Manual | Loại khỏi product ranking |
-| m | Manual | Loại khỏi product ranking |
-| AMAZONFEE | AMAZON FEE | Loại khỏi product ranking |
-| B | Adjust bad debt | Loại khỏi product ranking |
+| DOT | DOTCOM POSTAGE | Excluded from product ranking |
+| POST | POSTAGE | Excluded from product ranking |
+| M | Manual | Excluded from product ranking |
+| m | Manual | Excluded from product ranking |
+| AMAZONFEE | AMAZON FEE | Excluded from product ranking |
+| B | Adjust bad debt | Excluded from product ranking |
 
-Các mã `DCGSSBOY` và `DCGSSGIRL` được giữ lại vì chúng tương ứng với sản phẩm thật (`BOYS PARTY BAG` và `GIRLS PARTY BAG`).
+Codes `DCGSSBOY` and `DCGSSGIRL` are kept because they map to real products (`BOYS PARTY BAG` and `GIRLS PARTY BAG`).
 
-Service codes chỉ bị loại khỏi product ranking; chúng không bị xóa khỏi `cleaned_retail.csv` và vẫn được giữ khi tính tổng Revenue.
+Service codes are only excluded from the product ranking; they are not removed from `cleaned_retail.csv` and remain in total Revenue.
 
-Top 3 theo doanh thu: 22423 (£174,157), 23843 (£168,470), 85123A (£104,463).
+Top 3 by revenue: 22423 (£174,157), 23843 (£168,470), 85123A (£104,463).
 
-Top 3 theo số lượng: 23843, 23166, 22197.
+Top 3 by quantity: 23843, 23166, 22197.
 
-Chỉ có 23843 lọt cả hai top 3. 22423 dẫn đầu doanh thu nhưng không lọt top 3
-số lượng: giá cao, bán ít. 23166 bán chạy hạng 2 nhưng doanh thu chỉ hạng 6:
-giá rẻ, bán nhiều. Kết luận: "bán chạy nhất" và "tạo doanh thu cao nhất" là hai
-tập sản phẩm khác nhau.
+Only 23843 appears in both top 3s. 22423 leads revenue but not quantity: high price, low volume. 23166 is #2 by quantity but only #6 by revenue: cheap, high volume. Conclusion: "best-selling" and "highest-revenue" are two different product sets.
 
-### 3.5 Phân bố giá trị đơn hàng
-Boxplot cho thấy đơn hàng điển hình chỉ vài trăm bảng; ngưỡng trên (IQR) £1,006.11;
-đuôi outliers kéo tới £168K là các đơn sỉ (wholesale), không phải lỗi dữ liệu.
-Kết quả này làm đầu vào cho phân tích anomaly.
+### 3.5 Order value distribution
+The boxplot shows a typical order is only a few hundred pounds; the upper (IQR) threshold is £1,006.11; the outlier tail stretches to £168K, which are wholesale orders, not data errors. This result feeds into the anomaly analysis.
 
-## 4. Phương pháp
+## 4. Method
 - Code: `src/eda.py`
-- Charts: 5 file trong `charts/`
+- Charts: 5 files under `charts/`
 
-## 5. Hạn chế
-- Dataset quan sát 1 năm, 1 cửa hàng tại Anh: không suy rộng ra toàn ngành bán lẻ.
-- Tháng 12/2010 và 12/2011 thiếu dữ liệu.
-- Mã sản phẩm dạng số chưa map sang tên/mô tả cụ thể trong báo cáo này.
-- Phân tích mô tả, không kết luận nhân quả 
+## 5. Limitations
+- Dataset covers 1 year, 1 UK store: do not generalize to the whole retail industry.
+- December 2010 and December 2011 are partial months.
+- Numeric product codes are not mapped to names/descriptions in this report.
+- Descriptive analysis; no causal claims.
+
 ## 6. Charts
 - `charts/revenue_monthly_line.png`
 - `charts/revenue_country.png`
