@@ -4,7 +4,7 @@
 **Data:** UCI Online Retail (2010-12-01 to 2011-12-09)  
 **Evidence baseline:** `reports/kpi_reconciliation.md`, `notebooks/06_final_integrated_analysis.ipynb`, `reports/revenue_product_eda.md`, and saved charts under `charts/`.
 
-> **Reproducibility note:** This report uses the reconciled #18/#22 baseline and supplied processed CSVs. The order-level impact assessment reuses `src/anomaly_detector.py` from the integrated repository, not a competing implementation. The supplied cancellation export was independently audited. Revenue-impact figures are a supplementary, reproducible breakdown of existing IQR flags and do not replace any KPI in #18/#22.
+> **Reproducibility note:** This report uses the reconciled baseline and the supplied processed CSVs. The order-level impact assessment reuses `src/anomaly_detector.py` from the integrated repository, not a competing implementation. The supplied cancellation export was independently audited. Revenue-impact figures are a supplementary, reproducible breakdown of existing IQR flags and do not replace any reconciled KPI.
 
 ## 1. Project Overview and Research Questions
 
@@ -14,7 +14,7 @@ UCI Online Retail is the sole source for transaction/revenue calculations. The B
 
 ## 2. Dataset and Data Cleaning
 
-The reconciled analysis population comprises **524,878 valid sales line items** between **1 December 2010 and 9 December 2011**. Cleaning removes invoices beginning with `C` (cancellations), rows with non-positive `Quantity` or `UnitPrice`, and exact duplicates. Valid-line revenue is `Revenue = Quantity × UnitPrice`. The reconciliation reports **0 remaining exact duplicates**, **0 remaining non-positive quantity/price rows**, **5,268 duplicates removed** (value £21,740.98), and **2,512 invalid lines removed**. The baseline cleaning counts are reported by #18; anomaly and cancellation populations were independently audited against the supplied files for #19.
+The reconciled analysis population comprises **524,878 valid sales line items** between **1 December 2010 and 9 December 2011**. Cleaning removes invoices beginning with `C` (cancellations), rows with non-positive `Quantity` or `UnitPrice`, and exact duplicates. Valid-line revenue is `Revenue = Quantity × UnitPrice`. The reconciliation reports **0 remaining exact duplicates**, **0 remaining non-positive quantity/price rows**, **5,268 duplicates removed** (value £21,740.98), and **2,512 invalid lines removed**. The baseline cleaning counts come from the reconciliation report; anomaly and cancellation populations were independently audited against the supplied files.
 
 Rows without an identifiable customer are represented as **Guest**. They remain in total sales revenue but are **excluded from customer-level RFM**. This population distinction is essential:
 
@@ -42,7 +42,7 @@ The monthly revenue series peaks in **November 2011 (approximately £1.5 million
 
 ### 3.2 Product leaders: revenue versus volume
 
-The leading merchandise stock codes by **revenue** are **22423 (£174,157)**, **23843 (£168,470)** and **85123A (£104,463)** (rounded values reported by #7). The leading stock codes by **quantity** are **23843, 23166 and 22197**. Code **23843** appears in both top-three lists. Thus volume ranking and revenue ranking answer different questions and should not be treated as interchangeable.
+The leading merchandise stock codes by **revenue** are **22423 (£174,157)**, **23843 (£168,470)** and **85123A (£104,463)** (rounded values). The leading stock codes by **quantity** are **23843, 23166 and 22197**. Code **23843** appears in both top-three lists. Thus volume ranking and revenue ranking answer different questions and should not be treated as interchangeable.
 
 ![Top product rankings](../charts/final_top_products.png)
 
@@ -89,7 +89,7 @@ These categories overlap. The combined number is the **union**, not the sum of t
 
 ![Order value distribution](../charts/final_order_value_boxplot.png)
 
-**Impact on revenue/KPIs:** The supplementary `anomaly_orders.csv` contains **1,811 distinct revenue-flagged invoices**, rather than the complete revenue-or-quantity union. To avoid inferring combined impact from that partial export, the existing `src/anomaly_detector.py` was run against the full supplied `data/processed/cleaned_retail.csv`, with **the same IQR criteria as Final Notebook #22**. The resulting invoice-level flags precisely reproduce **19,960 invoices, 1,811 revenue flags, 1,445 quantity flags and 2,185 combined flags**, as well as the **£1,006.11** revenue and **636.5 units** quantity thresholds. The 2,185 flagged invoices contribute **£5,345,163.73 (50.23%)** of valid sales revenue **£10,642,110.80**, despite representing only **10.95%** of orders. Revenue-only flagged invoices contribute **£5,089,007.77**; the **374 quantity-only** flagged invoices contribute another **£256,155.96**. The remaining 17,775 invoices contribute **£5,296,947.07 (49.77%)**. These are **descriptive concentration figures**, not invalid-sales adjustments; excluding flagged orders is not recommended without further business validation.
+**Impact on revenue/KPIs:** The supplementary `anomaly_orders.csv` contains **1,811 distinct revenue-flagged invoices**, rather than the complete revenue-or-quantity union. To avoid inferring combined impact from that partial export, the existing `src/anomaly_detector.py` was run against the full supplied `data/processed/cleaned_retail.csv`, with **the same IQR criteria as the final notebook**. The resulting invoice-level flags precisely reproduce **19,960 invoices, 1,811 revenue flags, 1,445 quantity flags and 2,185 combined flags**, as well as the **£1,006.11** revenue and **636.5 units** quantity thresholds. The 2,185 flagged invoices contribute **£5,345,163.73 (50.23%)** of valid sales revenue **£10,642,110.80**, despite representing only **10.95%** of orders. Revenue-only flagged invoices contribute **£5,089,007.77**; the **374 quantity-only** flagged invoices contribute another **£256,155.96**. The remaining 17,775 invoices contribute **£5,296,947.07 (49.77%)**. These are **descriptive concentration figures**, not invalid-sales adjustments; excluding flagged orders is not recommended without further business validation.
 
 **Reproducible evidence:** `data/processed/anomaly_orders_union_issue19.csv` (2,185 flagged invoices, including `Revenue`, `TotalQuantity`, `LineCount`, `IsRevenueAnomaly`, `IsQuantityAnomaly` and `IsAnomaly`) is a supplemental report evidence export produced by the project's detector. Original `anomaly_orders.csv` is a revenue-only subset and is not treated as the combined export.
 
@@ -105,7 +105,7 @@ These categories overlap. The combined number is the **union**, not the sum of t
 
 **Finding 4 — revenue concentration among unusual orders:** 2,185 of 19,960 invoices (10.95%) meet at least one upper-tail IQR rule and account for £5,345,163.73 (50.23%) of valid sales revenue. **Recommendation:** prioritize contextual review of high-value/bulk orders and conduct sensitivity reporting, while retaining them in baseline KPIs unless business evidence justifies exclusions.
 
-These recommendations are **hypotheses/priorities supported by descriptive evidence**, not proven causal interventions. The anomaly revenue concentration is computed using the already-implemented #22 detector on the supplied reconciled population; it is not evidence of fraud.
+These recommendations are **hypotheses/priorities supported by descriptive evidence**, not proven causal interventions. The anomaly revenue concentration is computed using the project's detector on the supplied reconciled population; it is not evidence of fraud.
 
 ## 7. Limitations and Conclusion
 
@@ -117,7 +117,7 @@ These recommendations are **hypotheses/priorities supported by descriptive evide
 
 **Statistical versus operational anomaly.** IQR flags numerical extremity in revenue or quantity; they do **not** establish fraud, data-entry error or illegitimate orders. Outlier flags are particularly sensitive to bulk purchases and heavy-tailed retail order distributions.
 
-**Evidence completeness.** The latest Issue #22 repository ZIP contains `cleaned_retail.csv`, `customer_segments.csv`, and `revenue_by_segment.csv`, as well as executed notebook outputs and four final charts. The separately supplied cancellation and revenue-only anomaly exports were audited; `cancelled_retail.csv` is included in this delivery under `data/processed/`. The combined anomaly export was constructed with the existing `OrderAnomalyDetector` and can be regenerated from `cleaned_retail.csv`. The Issue #18 note calling 9,251 items “hóa đơn” should be read as 9,251 **lines**, not distinct invoices; the distinct cancellation invoice count is 3,836. These supplemental clarifications do not alter the reconciled total revenue.
+**Evidence completeness.** The delivered repository contains `cleaned_retail.csv`, `customer_segments.csv`, and `revenue_by_segment.csv`, as well as executed notebook outputs and four final charts. The separately supplied cancellation and revenue-only anomaly exports were audited; `cancelled_retail.csv` is included in this delivery under `data/processed/`. The combined anomaly export was constructed with the existing `OrderAnomalyDetector` and can be regenerated from `cleaned_retail.csv`. The 9,251 figure refers to **lines**, not distinct invoices; the distinct cancellation invoice count is 3,836. These supplemental clarifications do not alter the reconciled total revenue.
 
 **Conclusion.** The P4 analysis identifies substantial customer revenue concentration in **Champions**, geographically concentrated UK sales, different leaders by product revenue and sales volume, and **2,185 statistically unusual invoices**. The reconciled baseline is **£10,642,110.80** across **524,878 valid sales lines**, with **£8,887,208.89** attributable to identified customers. The findings are suitable for descriptive prioritization and follow-up investigation, not causal or fraud conclusions.
 
