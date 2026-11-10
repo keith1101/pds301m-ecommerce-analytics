@@ -108,6 +108,25 @@ jupyter notebook
 
 Open notebook 06 and run **Restart Kernel → Run All**. The notebook resolves repository root paths dynamically via `pathlib`, executing seamlessly from either the project root or the `notebooks/` subfolder. Built-in assertions verify that all intermediate KPIs reconcile exactly with established baselines.
 
+### Tiki canonical processor
+
+After Tiki raw data has been harvested into `data/raw/tiki/`, normalize it to the project canonical schema with:
+
+```python
+from src.data_processor import TikiDataProcessor
+
+processor = TikiDataProcessor("data/raw/tiki")
+processor.load_data()
+processor.clean_data()
+processor.engineer_features()
+processor.export_data(
+    "data/processed/cleaned_tiki.csv",
+    "data/processed/cancelled_tiki.csv",
+)
+```
+
+See `docs/DATASET_STORAGE.md` for the exact Tiki → canonical mapping contract.
+
 ### Run Pipeline Modules
 
 Execute data cleaning via the `RetailDataProcessor` class:

@@ -232,3 +232,103 @@ python src/tiki_scraper.py
 ```
 
 The pipeline uses circuit breaker resilience, connection pooling, and disk-level caching in `data/raw/tiki/` to prevent redundant network invocations. Raw files under `data/raw/` are excluded from Git version control.
+
+---
+
+## Tiki Canonical Processing Contract
+
+`TikiDataProcessor` in `src/data_processor.py` converts the harvested Tiki
+product/review dataset into the same canonical transaction schema used by the
+UCI pipeline. Tiki remains a separate secondary dataset and is **not** joined
+into `cleaned_retail.csv`.
+
+### Input priority
+
+The processor accepts either consolidated JSON files:
+
+```text
+data/raw/tiki/all_products.json
+data/raw/tiki/all_reviews.json
+```
+
+or the flattened scraper CSV files:
+
+```text
+data/raw/tiki/raw_tiki_products.csv
+data/raw/tiki/raw_tiki_reviews.csv
+```
+
+When both forms exist, the consolidated JSON files are preferred.
+
+### Mapping to the canonical schema
+
+Only verified purchase reviews where `purchased == True` are eligible to
+become transactions.
+
+| Canonical column | Tiki source / rule |
+|---|---|
+| `InvoiceNo` | `review.id` formatted as `TIKI_REV_{id}` |
+| `StockCode` | `product.id` converted to string |
+| `Description` | `product.name`; blank/missing values become `Unknown` |
+| `Quantity` | Constant `1` per verified purchase review |
+| `InvoiceDate` | `review.created_at`, parsed from Unix seconds (datetime text is also tolerated) |
+| `UnitPrice` | `product.price`, numeric and `> 0` |
+| `CustomerID` | `review.customer_id`; missing values become `Guest` |
+| `Country` | Constant `Vietnam` |
+| `Revenue` | `Quantity * UnitPrice` |
+| `YearMonth` | `InvoiceDate` formatted as `YYYY-MM` |
+
+The resulting column order is:
+
+```text
+InvoiceNo, StockCode, Description, Quantity, InvoiceDate,
+UnitPrice, CustomerID, Country, Revenue, YearMonth
+```
+
+### Cleaning and duplicate audit
+
+`TikiDataProcessor.clean_data()`:
+
+1. keeps only verified-purchase reviews;
+2. joins each review to its product by product ID;
+3. converts IDs, dates and prices into canonical types;
+4. rejects rows with missing review/product IDs, invalid dates, or invalid/non-positive prices;
+5. fills missing customer IDs with `Guest` when `fill_guest=True`;
+6. detects exact canonical duplicate rows and records:
+   - `duplicate_rows`;
+   - `qty_diff_dedup`;
+   - `rev_diff_dedup`.
+
+The Tiki review source does not expose an UCI-style cancellation code. The
+processor therefore does not relabel unverified reviews as cancellations.
+`cancelled_tiki.csv` is exported as a schema-compatible empty file unless a
+future Tiki source introduces an explicit cancellation signal.
+
+### Reproduce the processed Tiki dataset
+
+```python
+from src.data_processor import TikiDataProcessor
+
+processor = TikiDataProcessor("data/raw/tiki")
+processor.load_data()
+processor.clean_data(deduplicate=True, fill_guest=True)
+processor.engineer_features()
+processor.export_data(
+    "data/processed/cleaned_tiki.csv",
+    "data/processed/cancelled_tiki.csv",
+)
+```
+
+Acceptance checks:
+
+```bash
+python -m pytest tests/test_tiki_processor.py -q
+python -m pytest -q
+```
+
+`data/processed/cleaned_tiki.csv` must contain the full canonical schema,
+contain no null values in required output columns, and satisfy exactly:
+
+```text
+Revenue = Quantity * UnitPrice
+```
