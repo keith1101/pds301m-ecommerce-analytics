@@ -248,7 +248,7 @@ def calculate_rfm(
     last_valid_purchase = transactions["InvoiceDate"].max()
 
     if reference_date is None:
-        reference = last_valid_purchase.normalize() + pd.Timedelta(days=1)
+        reference = last_valid_purchase.normalize() + pd.Timedelta(1, unit="D")
     else:
         reference = pd.Timestamp(reference_date).normalize()
         if reference <= last_valid_purchase.normalize():
