@@ -10,7 +10,8 @@ class OrderAnomalyDetector:
         cleaned_data_path: str | Path = None,
         cancelled_data_path: str | Path = None,
         df_valid: pd.DataFrame = None,
-        df_cancelled: pd.DataFrame = None
+        df_cancelled: pd.DataFrame = None,
+        currency_prefix: str = "£"
     ):
         self.df = (
             df_valid
@@ -41,6 +42,7 @@ class OrderAnomalyDetector:
 
         self.order_stats = None
         self.metrics = {}
+        self.currency_prefix = currency_prefix
 
     def analyze_cancelled_orders(self) -> dict:
         print(
@@ -255,11 +257,11 @@ class OrderAnomalyDetector:
 
         print(
             f"- Revenue: "
-            f"Q1=£{q1_rev:,.2f}, "
-            f"Q3=£{q3_rev:,.2f}, "
-            f"IQR=£{iqr_rev:,.2f} "
+            f"Q1={self.currency_prefix}{q1_rev:,.2f}, "
+            f"Q3={self.currency_prefix}{q3_rev:,.2f}, "
+            f"IQR={self.currency_prefix}{iqr_rev:,.2f} "
             f"-> Threshold Q3 + 1.5*IQR "
-            f"= £{ub_rev:,.2f}"
+            f"= {self.currency_prefix}{ub_rev:,.2f}"
         )
 
         print(
@@ -268,7 +270,7 @@ class OrderAnomalyDetector:
             f"Q3={q3_qty:,.1f}, "
             f"IQR={iqr_qty:,.1f} "
             f"-> Threshold Q3 + 1.5*IQR "
-            f"= {ub_qty:,.1f}"
+            f"={ub_qty:,.1f}"
         )
 
         print(
@@ -466,27 +468,27 @@ class OrderAnomalyDetector:
 
         print(
             f"- Total revenue: "
-            f"£{total_revenue:,.2f}"
+            f"{self.currency_prefix}{total_revenue:,.2f}"
         )
 
         print(
             "- Revenue anomaly: "
             f"{revenue_impact['anomaly_orders']:,} orders, "
-            f"£{revenue_impact['anomaly_revenue']:,.2f} "
+            f"{self.currency_prefix}{revenue_impact['anomaly_revenue']:,.2f} "
             f"({revenue_impact['revenue_ratio']:.2f}% revenue)"
         )
 
         print(
             "- Quantity anomaly: "
             f"{quantity_impact['anomaly_orders']:,} orders, "
-            f"£{quantity_impact['anomaly_revenue']:,.2f} "
+            f"{self.currency_prefix}{quantity_impact['anomaly_revenue']:,.2f} "
             f"({quantity_impact['revenue_ratio']:.2f}% revenue)"
         )
 
         print(
             "- Combined anomaly: "
             f"{combined_impact['anomaly_orders']:,} orders, "
-            f"£{combined_impact['anomaly_revenue']:,.2f} "
+            f"{self.currency_prefix}{combined_impact['anomaly_revenue']:,.2f} "
             f"({combined_impact['revenue_ratio']:.2f}% revenue)"
         )
 
@@ -569,7 +571,7 @@ class OrderAnomalyDetector:
             linestyle='--',
             label=(
                 f"Upper Bound "
-                f"(£{self.metrics.get('ub_rev', 0):,.2f})"
+                f"({self.currency_prefix}{self.metrics.get('ub_rev', 0):,.2f})"
             )
         )
 
@@ -579,7 +581,7 @@ class OrderAnomalyDetector:
         )
 
         plt.xlabel(
-            'Order Revenue (£)'
+            f'Order Revenue ({self.currency_prefix.strip()})'
         )
 
         plt.legend()
