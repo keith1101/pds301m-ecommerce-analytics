@@ -19,9 +19,21 @@
 | 15 | Charts | COVERED | Thư mục `charts/` (15 files PNG tracked); `reports/final_analytics_report.md` (dòng 38, 48, 70, 91); `README.md` (dòng 162-172) | Tất cả 15 biểu đồ PNG đều được commit và track trong Git (gồm 4 biểu đồ final `final_*.png` và 11 biểu đồ phase EDA, RFM, Anomaly). Tất cả đường dẫn cite trong reports đều tồn tại. |
 | 16 | Report insight | COVERED | `reports/final_analytics_report.md` (Issue #19); `reports/revenue_product_eda.md` (Issue #7); `reports/kpi_reconciliation.md` (Issue #18); `reports/final_evidence_notes.md` | Các báo cáo trình bày mạch lạc: câu hỏi nghiên cứu, phạm vi, phương pháp, kết quả đối chiếu, 4 phát hiện tích hợp và khuyến nghị kinh doanh, limitations, kèm bảng đối soát traceability chi tiết. |
 
+---
+
+## Upgrade Scope Requirements (Tiki E-Commerce Analytics Extension)
+
+| # | Upgrade Requirement | Status | Evidence (đường dẫn chính xác) | Ghi chú |
+|---|---------------------|--------|-------------------------------|---------|
+| UPG-01 | Tiki Public API Scraper & Resilience | COVERED | `src/tiki_scraper.py`; `tests/test_tiki_scraper.py` (12 tests); `data/raw/tiki/raw_tiki_products.csv` (2,100 SP); `data/raw/tiki/raw_tiki_reviews.csv` (5,691 reviews); `docs/DATASET_STORAGE.md` | Scraper public API với Session connection pool, exponential backoff, circuit breaker, chống WAF challenge, cache đĩa cứng. Đạt 2,100 sản phẩm và 5,691 reviews từ 3 ngành hàng (8322, 1815, 1882). Xuất raw CSV và JSON. PR #47 merged, Issue #43 closed. |
+| UPG-02 | Canonical OOP TikiDataProcessor | COVERED | `src/data_processor.py` (`class TikiDataProcessor`); `tests/test_tiki_processor.py` (6 tests); `docs/DATASET_STORAGE.md`; `README.md` | Lớp OOP kế thừa `RetailDataProcessor`, chuẩn hóa dữ liệu Tiki về canonical schema 10 cột tương thích UCI. Xử lý timestamp Unix, ép kiểu an toàn, deduplication audit, lọc 5,026 giao dịch hợp lệ từ người mua đã xác thực (`purchased == True`). PR #48 merged, Issue #44 closed. |
+| UPG-03 | Tiki IQR Anomaly & RFM Customer Segmentation | COVERED | `src/anomaly_detector.py`; `src/feature_engineering.py`; `src/tiki_eda.py`; `tests/test_tiki_models.py` (2 tests); `notebooks/07_tiki_integrated_analysis.ipynb`; `reports/tiki_eda_report.md`; `charts/tiki_*.png` (5 biểu đồ) | Áp dụng mô hình phát hiện dị biệt IQR cận trên và phân tầng RFM tie-safe 6 phân khúc cho khách hàng Tiki. Xuất 5 biểu đồ trực quan và notebook 07 tích hợp end-to-end với đầy đủ phân tích so sánh song song thị trường Anh vs Việt Nam. PR #50 merged, Issue #45 closed. |
+| UPG-04 | Confluence, Traceability & Defense Dossier | COVERED | `docs/p4_traceability.md`; `reports/KichBanThuyetTrinh_G3.md`; `docs/PROJECT_EXECUTION_PLAN.md`; `docs/TIKI_SCRAPING_ANALYTICS_DESIGN.md` | Hoàn thiện ma trận truy vết 16 REQ gốc + 4 UPG mở rộng. Kịch bản thuyết trình bảo vệ 8 phút và cheat sheet số liệu phân vai chi tiết cho 3 thành viên (Huy, Hào, Mẫn). Hồ sơ kỹ thuật và kế hoạch thực thi đầy đủ. Issue #46 hoàn tất. |
+
 ## Tổng kết đánh giá
 
-- **Trạng thái:** 16/16 requirements đạt **COVERED (100%)**, 0 PARTIAL, 0 MISSING.
-- Toàn bộ 4 hàm business rules đã có unit test riêng trong `tests/test_business_rules.py` và được tích hợp vào notebook demo `05_python_oop_demo.ipynb`.
-- Đầy đủ demo trực quan 4 cấu trúc dữ liệu cơ bản (list, dict, set, tuple) trong Notebook 05.
-- Codebase, tài liệu và test suite (45/45 tests pass) hoàn toàn đồng bộ, đạt chuẩn bàn giao môn học.
+- **Yêu cầu cốt lõi P4:** 16/16 requirements đạt **COVERED (100%)**, 0 PARTIAL, 0 MISSING.
+- **Yêu cầu mở rộng UPG:** 4/4 upgrades đạt **COVERED (100%)** (UPG-01, UPG-02, UPG-03, UPG-04).
+- **Bộ kiểm thử tự động toàn diện:** **65/65 unit & integration tests PASS 100%** (45 tests UCI gốc + 12 tests scraper + 6 tests processor + 2 tests model).
+- **Phân tách Hợp đồng Dữ liệu:** UCI Online Retail (track chính) và Tiki E-Commerce (track mở rộng độc lập) được duy trì rành mạch, bảo toàn 100% tính toàn vẹn dữ liệu gốc và tính mở rộng module.
+
