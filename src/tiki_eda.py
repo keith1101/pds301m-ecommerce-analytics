@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import json 
+import textwrap
 
 
 def plot_price_distribution(
@@ -62,13 +63,16 @@ def plot_top_products_sold(
         .iloc[::-1]
     )
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bars = ax.barh(top["id"].astype(str), top["UnitsSold"], color="#1677A8")
+    product_names = top["name"].map(
+        lambda name: textwrap.fill(str(name), width=42, break_long_words=False)
+    )
+    fig, ax = plt.subplots(figsize=(11, 8))
+    bars = ax.barh(product_names, top["UnitsSold"], color="#1677A8")
     ax.bar_label(bars, labels=[f"{v:,.0f}" for v in top["UnitsSold"]], padding=4)
     ax.set_xlim(0, top["UnitsSold"].max() * 1.18)
     ax.set_title("Top 10 sampled Tiki products by reported units sold")
     ax.set_xlabel("Reported units sold")
-    ax.set_ylabel("Product ID")
+    ax.set_ylabel("Product name")
     ax.grid(axis="x", alpha=0.25)
     ax.set_axisbelow(True)
 
